@@ -10,15 +10,20 @@ var PrivateRepeatMsg bool
 
 func HandlerPrivate(ctx *ext.Context, update *ext.Update) error {
 	user := update.EffectiveUser()
-	go func() {
-		GroupLog <- fmt.Sprintf(
-			"======收到私聊消息======\n%s: %s", user.FirstName+user.LastName, update.EffectiveMessage.Text)
-	}()
+	AddLog(fmt.Sprintf(
+		"======收到私聊消息======\n%s: %s", user.FirstName+user.LastName, update.EffectiveMessage.Text))
 	if PrivateRepeatMsg {
 		//给消息点赞
-		cool := &tg.MessagesSendReactionRequest{Reaction: []tg.ReactionClass{&tg.ReactionEmoji{Emoticon: "👍"}}}
+		/*cool := &tg.MessagesSendReactionRequest{Reaction: []tg.ReactionClass{&tg.ReactionEmoji{Emoticon: "👍"}}}
 		cool.MsgID = update.EffectiveMessage.ID
-		ctx.SendReaction(user.GetID(), cool)
+		ctx.SendReaction(user.GetID(), cool)*/
+		req := &tg.MessagesSendReactionRequest{
+			Peer:     update.EffectiveChat().GetInputPeer(),
+			Big:      true,
+			MsgID:    update.EffectiveMessage.ID,
+			Reaction: []tg.ReactionClass{&tg.ReactionEmoji{Emoticon: "emoji"}},
+		}
+		ctx.SendReaction(update.EffectiveChat().GetID(), req)
 	}
 
 	//查看所有已打开的聊天窗口

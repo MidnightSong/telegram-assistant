@@ -20,7 +20,7 @@ func HandlerGroups(ctx *ext.Context, update *ext.Update) error {
 	now := time.Now().Unix()
 	if now-int64(update.EffectiveMessage.Date) > 60 {
 		//utils.LogInfo(ctx, "读取到1分钟之前的消息，忽略")
-		go func() { GroupLog <- "读取到1分钟之前的消息，忽略" }()
+		AddLog("读取到1分钟之前的消息，忽略")
 		return nil
 	}
 	//如果没有打开重复机器人消息的设置，则不进行后续处理
@@ -47,7 +47,7 @@ func groupRepeatMsgReplyToFunc(ctx *ext.Context, update *ext.Update) bool {
 		if replyTo != nil && ctx.Self.ID == replyTo.FromID.(*tg.PeerUser).UserID {
 			//仅处理自己转发的消息
 			if replyTo.FwdFrom.FromID != nil {
-				go func() { GroupLog <- fmt.Sprint("关联回复机器人消息:\n", update.EffectiveMessage.Text) }()
+				AddLog(fmt.Sprint("关联回复机器人消息:\n", update.EffectiveMessage.Text))
 				//TODO 释放
 				/*answer := ctx.Sender.Answer(*update.Entities, update.UpdateClass.(message.AnswerableMessageUpdate))
 				f := entities.FwdMsg{
@@ -58,7 +58,7 @@ func groupRepeatMsgReplyToFunc(ctx *ext.Context, update *ext.Update) bool {
 				go func() { GroupLog <- fmt.Sprint("回复原始消息", fwd.FwdMsgID) }()
 				if e != nil {
 					//utils.LogInfo(ctx, "没有找到转发消息的原始id：可能已经删除")
-					go func() { GroupLog <- "没有找到转发消息的原始id：可能已经删除" }()
+					AddLog(fmt.Sprint("没有找到转发消息的原始id：可能已经删除"))
 					return true
 				}
 				//查找自己转发消息的原始消息id
@@ -92,7 +92,7 @@ func GroupRepeatMsgFunc(ctx *ext.Context, update *ext.Update) bool {
 						for _, user := range update.Entities.Users {
 							username += fmt.Sprintf("<@%s>+\n", user.Username)
 						}
-						GroupLog <- fmt.Sprintf("重复发送订单号类型的消息,隐藏来源:\n 消息：%s \n发送者：%s", msg, username)
+						AddLog(fmt.Sprint("重复发送订单号类型的消息,隐藏来源:\n 消息：%s \n发送者：%s"))
 					}()
 					/*p := update.EffectiveMessage.Media.(*tg.MessageMediaPhoto)
 					photo := &tg.InputPhoto{
@@ -113,14 +113,14 @@ func GroupRepeatMsgFunc(ctx *ext.Context, update *ext.Update) bool {
 						for _, user := range update.Entities.Users {
 							username += fmt.Sprintf("<@%s>+\n", user.Username)
 						}
-						GroupLog <- fmt.Sprintf("重复发送订单号类型的消息,显示来源:\n 消息：%s \n发送者：%s", msg, username)
+						AddLog(fmt.Sprintf("重复发送订单号类型的消息,显示来源:\n 消息：%s \n发送者：%s", msg, username))
 					}()
 				}
 
 				//utils.LogInfo(ctx, "获取到机器人发送订单号类型消息："+msg)
 				/*if e != nil {
 					//utils.LogError(ctx, "重复机器人消息失败："+e.Error())
-					go func() { GroupLog <- "重复机器人消息失败：" + e.Error() }()
+					AddLog( "重复机器人消息失败：" + e.Error())
 					return true
 				}
 				f := &entities.FwdMsg{
@@ -132,7 +132,7 @@ func GroupRepeatMsgFunc(ctx *ext.Context, update *ext.Update) bool {
 				e = dao.FwdMsg{}.Insert(f)
 				if e != nil {
 					//utils.LogError(ctx, "保存重复发送的消息id失败"+e.Error())
-					go func() { GroupLog <- "保存重复发送的消息id失败" + e.Error() }()
+					AddLog("保存重复发送的消息id失败" + e.Error())
 				}*/
 				return true
 			}

@@ -232,7 +232,7 @@ func (ctx *Context) GetInlineBotResults(chatId int64, botUsername string, reques
 				AccessHash: c.GetAccessHash(),
 			}
 		default:
-			return nil, errors.New("provided username was invalid for a bot")
+			return nil, errors.New("provided username was invalid for a assistant")
 		}
 	}
 	request.Peer = ctx.PeerStorage.GetInputPeerById(chatId)
@@ -243,7 +243,7 @@ func (ctx *Context) GetInlineBotResults(chatId int64, botUsername string, reques
 	return ctx.Raw.MessagesGetInlineBotResults(ctx, request)
 }
 
-// TODO: Implement return helper for inline bot result
+// TODO: Implement return helper for inline assistant result
 
 // SendInlineBotResult invokes method messages.sendInlineBotResult#7aa11297 returning error if any. Send a result obtained using messages.getInlineBotResults¹.
 func (ctx *Context) SendInlineBotResult(chatId int64, request *tg.MessagesSendInlineBotResultRequest) (tg.UpdatesClass, error) {

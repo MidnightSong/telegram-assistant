@@ -5,14 +5,13 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/driver/desktop"
-	"github.com/midnightsong/telegram-assistant/views/component"
 )
 
 var phoneNum string
 
 func Run() {
 	flag.StringVar(&phoneNum, "p", "", "手机号")
-	/*myApp := app.NewWithID("com.tg-bot.preferences")
+	/*myApp := app.NewWithID("com.tg-assistant.preferences")
 	loginWindown := myApp.NewWindow("登录")
 
 	tabs := container.NewAppTabs(
@@ -30,7 +29,7 @@ func Run() {
 	myApp := app.New()
 	configWindow := myApp.NewWindow("个人号机器人")
 
-	configWindow.SetContent(component.ConfigWidget(configWindow, myApp))
+	configWindow.SetContent(ConfigWidget(configWindow, myApp))
 	configWindow.Resize(fyne.NewSize(400, 400))
 	if desk, ok := myApp.(desktop.App); ok {
 		m := fyne.NewMenu("Telegram Bot",

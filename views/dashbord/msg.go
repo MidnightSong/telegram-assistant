@@ -1,136 +1,41 @@
-package component
+package dashbord
 
 import (
 	"context"
 	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/gotd/td/tg"
-	"github.com/midnightsong/telegram-assistant/bot"
-	"github.com/midnightsong/telegram-assistant/dao"
-	"github.com/midnightsong/telegram-assistant/gotgproto"
-	"github.com/midnightsong/telegram-assistant/msg"
+	"github.com/midnightsong/telegram-assistant/assistant/msg"
+	"github.com/midnightsong/telegram-assistant/icon"
 	"github.com/midnightsong/telegram-assistant/utils"
 	"go.uber.org/zap"
-	"os"
 	"reflect"
-	"strconv"
 	"strings"
+	"time"
 )
 
-var config = dao.Config{}
-var tgClient *gotgproto.Client
-
-func MsgNewWindow(window fyne.Window, myApp fyne.App) {
-	tgClient = <-bot.NewClient
-	gotgproto.Logged = true
-	dashboardWindow := myApp.NewWindow(fmt.Sprintf("欢迎：%s %s", tgClient.Self.FirstName, tgClient.Self.LastName))
-
+func getMsgView() *container.TabItem {
 	msgTab := container.NewAppTabs(
 		container.NewTabItem("处理日志", msgRtView()),
 		container.NewTabItem("已打开的会话", openedDialogs()),
 	)
-
-	configTab := container.NewAppTabs(
-		container.NewTabItem("私聊", configPrivateView(myApp)),
-		container.NewTabItem("群聊/频道", configGroupView(myApp)),
-	)
-
-	leftTabs := container.NewAppTabs(
-		container.NewTabItemWithIcon("消息", theme.MailSendIcon(), msgTab),
-		container.NewTabItemWithIcon("配置", theme.SettingsIcon(), container.NewVBox(configTab)),
-	)
-
-	leftTabs.SetTabLocation(container.TabLocationLeading)
-
-	dashboardWindow.Resize(fyne.NewSize(1024, 576))
-	dashboardWindow.SetContent(leftTabs)
-	dashboardWindow.Show()
-	dashboardWindow.SetCloseIntercept(func() {
-		dashboardWindow.Close()
-		myApp.Quit()
-		os.Exit(0)
-	})
-	window.Close()
+	return container.NewTabItemWithIcon("", theme.MailSendIcon(), msgTab)
 }
 
-func configGroupView(myApp fyne.App) *fyne.Container {
-	//重复机器人的消息
-	repeatBotMsg := widget.NewLabel("重复机器人的消息")
-	repeatBotMsgAlign := widget.NewRadioGroup([]string{"是", "否"}, func(s string) {
-		_ = config.Set("GroupRepeatMsg", strconv.FormatBool(s == "是"))
-		msg.GroupRepeatMsg = s == "是"
-		repeatBotMsg.Refresh()
-	})
-	repeatBotMsgAlign.Horizontal = true
-	parseBool, _ := strconv.ParseBool(config.Get("GroupRepeatMsg"))
-	msg.GroupRepeatMsg = parseBool
-	if parseBool {
-		repeatBotMsgAlign.SetSelected("是")
-	} else {
-		repeatBotMsgAlign.SetSelected("否")
-	}
-
-	//是否隐藏重复消息的来源
-	hideRepeatBotMsg := widget.NewLabel("当重复消息时，是否隐藏来源")
-	hideRepeatBotMsgAlign := widget.NewRadioGroup([]string{"是", "否"}, func(s string) {
-		_ = config.Set("GroupHideSourceRepeatBotMsg", strconv.FormatBool(s == "是"))
-		msg.GroupHideSourceRepeatBotMsg = s == "是"
-		hideRepeatBotMsg.Refresh()
-	})
-	hideRepeatBotMsgAlign.Horizontal = true
-	parseBool, _ = strconv.ParseBool(config.Get("GroupHideSourceRepeatBotMsg"))
-	msg.GroupHideSourceRepeatBotMsg = parseBool
-	if parseBool {
-		hideRepeatBotMsgAlign.SetSelected("是")
-	} else {
-		hideRepeatBotMsgAlign.SetSelected("否")
-	}
-
-	//关联回复重复过的机器人消息
-	groupRepeatMsgReplyTo := widget.NewLabel("当有回复自己的消息时，关联回复重复过的机器人消息")
-	groupRepeatMsgReplyToAlign := widget.NewRadioGroup([]string{"是", "否"}, func(s string) {
-		_ = config.Set("GroupRepeatMsgReplyTo", strconv.FormatBool(s == "是"))
-		msg.GroupRepeatMsgReplyTo = s == "是"
-		groupRepeatMsgReplyTo.Refresh()
-	})
-	groupRepeatMsgReplyToAlign.Horizontal = true
-	parseBool, _ = strconv.ParseBool(config.Get("GroupRepeatMsgReplyTo"))
-	msg.GroupRepeatMsgReplyTo = parseBool
-	if parseBool {
-		groupRepeatMsgReplyToAlign.SetSelected("是")
-	} else {
-		groupRepeatMsgReplyToAlign.SetSelected("否")
-	}
-	return container.NewVBox(repeatBotMsg, repeatBotMsgAlign, hideRepeatBotMsg, hideRepeatBotMsgAlign, groupRepeatMsgReplyTo, groupRepeatMsgReplyToAlign)
-}
-
-func configPrivateView(myApp fyne.App) *fyne.Container {
-	label := widget.NewLabel("自动给消息点赞")
-	radioAlign := widget.NewRadioGroup([]string{"是", "否"}, func(s string) {
-		_ = config.Set("emoticon bot msg", strconv.FormatBool(s == "是"))
-		msg.PrivateRepeatMsg = s == "是"
-		label.Refresh()
-	})
-	radioAlign.Horizontal = true
-	parseBool, _ := strconv.ParseBool(config.Get("emoticon bot msg"))
-	msg.PrivateRepeatMsg = parseBool
-	if parseBool {
-		radioAlign.SetSelected("是")
-	} else {
-		radioAlign.SetSelected("否")
-	}
-	return container.NewVBox(label, radioAlign)
-}
 func msgRtView() fyne.CanvasObject {
 	RtMsg := widget.NewMultiLineEntry()
 	RtMsg.Wrapping = fyne.TextWrapWord
 	go func() {
 		for {
-			log := <-msg.GroupLog
+			log := <-msg.Log
 			RtMsg.Text += "\n" + log
+			if len(RtMsg.Text) > 6666 {
+				RtMsg.Text = RtMsg.Text[len(RtMsg.Text)-6666:]
+			}
 			RtMsg.Refresh()
 		}
 	}()
@@ -272,16 +177,25 @@ func openedDialogs() fyne.CanvasObject {
 			table.SetRowHeight(index, 50)
 		}
 	}
-
-	refresh := widget.NewButton("刷新", func() {
+	var refresh *widget.Button
+	refresh = widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {
 		chats = getDialogs()
 		table.Refresh()
+		go func() {
+			refresh.Disable()
+			time.Sleep(time.Second * 5)
+			refresh.Enable()
+		}()
 	})
-	return container.NewBorder(refresh, nil, nil, nil, table)
+	var loudSpeaker *widget.Button
+	loudSpeaker = widget.NewButtonWithIcon("", icon.GetIcon(icon.LoudSpeaker), func() {
+		fmt.Println("点了一下广播按钮")
+	})
+	buttonsBox := container.NewHBox(loudSpeaker, layout.NewSpacer(), refresh)
+	return container.NewBorder(buttonsBox, nil, nil, nil, table)
 }
 
 func getDialogs() []interface{} {
-	fmt.Println("=======")
 	d, _ := tgClient.API().MessagesGetDialogs(context.Background(), &tg.MessagesGetDialogsRequest{
 		OffsetPeer: &tg.InputPeerEmpty{}})
 	apiDialogs := reflect.ValueOf(d)

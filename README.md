@@ -1,7 +1,7 @@
-# <a href="https://github.com/celestix/gotgproto"><img src="./gotgproto.png" width="40px" align="left"></img></a> GoTGProto
+# <a href="https://github.com/midnightsong/telegram-assistant"><img src="./icon.png" width="40px" align="left"></img></a> Telegram-Assistant
 **Note**: 这个项目仍然处于早期开发中...
 
-**本项目是基于GoTGProto为基础二次开发的桌面应用程序**
+**本项目是基于[Fyne](https://github.com/fyne-io/fyne)和[GoTgProto](https://github.com/celestix/gotgproto)为基础二次开发的桌面应用程序**
 
 ### 实现功能：
 #### 1、使用个人telegram账号登录，解决机器人无法互相之间读取消息的限制
@@ -20,7 +20,7 @@
 ## 安装
 你可以通过`go get`命令来下载这个依赖库
 ```bash
-go get github.com/MidnightSong/telegram-bot
+go get github.com/midnightsong/telegram-assistant
 ```
 
 
