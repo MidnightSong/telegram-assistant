@@ -19,7 +19,10 @@ var ipAddressRegex = "((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)\\.){3}(25[0-5]|2[0-
 var numberRegex = "(\\d{1,5})"
 
 func GetSettingView(window fyne.Window) *fyne.Container {
-
+	/*dir, _ := os.Getwd()
+	information := dialog.NewInformation("path", dir, window)
+	information.Resize(fyne.NewSize(300, 300))
+	information.Show()*/
 	authCode := binding.NewString()
 	_ = authCode.Set(config.Get("authCode"))
 	authCodeLabel := widget.NewLabel("激活码")

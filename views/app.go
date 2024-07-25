@@ -16,11 +16,12 @@ func Run() {
 			}))
 		desk.SetSystemTrayMenu(m)
 	}*/
-	_, err := dao.Sessions{}.GetSession(entities.Sessions{Version: 1})
+	d, err := dao.Sessions{}.GetSession(entities.Sessions{Version: 1})
 	if err != nil {
 		auth.LoginWindow(myApp)
 	} else {
-		auth.ExpireWindow(nil, myApp)
+		auth.ExpireWindow(nil, myApp, d)
 	}
+
 	myApp.Run()
 }

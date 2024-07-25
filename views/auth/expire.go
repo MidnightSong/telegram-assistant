@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"encoding/json"
 	"errors"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -18,8 +19,15 @@ import (
 var config = dao.Config{}
 var pass = make(chan bool)
 
-func ExpireWindow(jumpInWindow fyne.Window, app fyne.App) {
+func ExpireWindow(jumpInWindow fyne.Window, app fyne.App, any2 any) {
 	expireWindow := app.NewWindow("登录中")
+	if any2 != nil {
+		marshal, _ := json.Marshal(any2)
+		information := dialog.NewInformation("any", string(marshal), expireWindow)
+		information.Resize(fyne.NewSize(300, 300))
+		information.Show()
+	}
+
 	text := "正在验证信息中"
 	label := widget.NewLabel(text)
 	go func() {
@@ -71,7 +79,7 @@ func showSettingWindow(app fyne.App) fyne.Window {
 	settingWindow := app.NewWindow("配置")
 	settingWindow.SetFixedSize(true)
 	settingWindow.SetContent(setting.GetSettingView(settingWindow))
-	settingWindow.Resize(fyne.NewSize(300, 400))
+	settingWindow.Resize(fyne.NewSize(400, 400))
 	settingWindow.Show()
 	settingWindow.CenterOnScreen()
 	return settingWindow

@@ -23,14 +23,14 @@ func Run() error {
 	goos := runtime.GOOS
 	systemVersion := "23H2"
 	if goos == "darwin" {
-		goos = "MacBook pro 2023"
+		goos = "MacBook Pro 2023"
 		systemVersion = "macOS 14.5"
 	}
 
 	opts := &gotgproto.ClientOpts{
 		Session:        dao.SqlSession,
 		Logger:         utils.Logger,
-		Device:         &telegram.DeviceConfig{DeviceModel: goos, SystemVersion: systemVersion, AppVersion: "1.0 beta", SystemLangCode: "en", LangPack: "gotgproto", LangCode: "golang"},
+		Device:         &telegram.DeviceConfig{DeviceModel: goos, SystemVersion: systemVersion, AppVersion: "1.0 beta18", SystemLangCode: "en", LangPack: "gotgproto", LangCode: "golang"},
 		SystemLangCode: "zh_cn",
 		ClientLangCode: "zh_cn",
 		AutoFetchReply: true,

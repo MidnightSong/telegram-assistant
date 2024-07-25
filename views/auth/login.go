@@ -30,7 +30,7 @@ func LoginWindow(myApp fyne.App) {
 		activity.Show()
 		phoneNum, _ := phoneNumber.Get()
 		config.Set("phoneNumber", phoneNum)
-		ExpireWindow(loginWindow, myApp)
+		ExpireWindow(loginWindow, myApp, nil)
 	}
 	button = widget.NewButton("启动", loginButton)
 	showSetting := widget.NewButtonWithIcon("", theme.SettingsIcon(), func() {

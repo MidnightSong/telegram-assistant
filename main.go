@@ -6,7 +6,6 @@ import (
 	"os"
 )
 
-var m *bool //迁移数据库
 func init() {
 	name, _ := utils.FileName("/view/font/YaHei.ttf")
 	fontPath := name
