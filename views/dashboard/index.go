@@ -1,4 +1,4 @@
-package dashbord
+package dashboard
 
 import (
 	"fmt"
@@ -13,25 +13,26 @@ import (
 var config = dao.Config{}
 var tgClient *gotgproto.Client
 
-func MsgNewWindow(window fyne.Window, myApp fyne.App) {
+func MsgNewWindow(jumpInWindow fyne.Window, myApp fyne.App) {
 	tgClient = <-assistant.NewClient
 	gotgproto.Logged = true
 	dashboardWindow := myApp.NewWindow(fmt.Sprintf("欢迎：%s %s", tgClient.Self.FirstName, tgClient.Self.LastName))
-
 	leftTabs := container.NewAppTabs(
-		getMsgView(),          //消息栏
-		getSettingView(myApp), //设置栏
+		getMsgView(),                           //消息栏
+		getSettingView(dashboardWindow, myApp), //设置栏
+		GetLogOutView(dashboardWindow),         //注销栏
 	)
 
 	leftTabs.SetTabLocation(container.TabLocationLeading)
 
 	dashboardWindow.Resize(fyne.NewSize(1024, 576))
 	dashboardWindow.SetContent(leftTabs)
+	dashboardWindow.CenterOnScreen()
 	dashboardWindow.Show()
+	jumpInWindow.Close()
 	dashboardWindow.SetCloseIntercept(func() {
 		dashboardWindow.Close()
 		myApp.Quit()
 		os.Exit(0)
 	})
-	window.Close()
 }

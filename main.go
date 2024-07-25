@@ -8,7 +8,7 @@ import (
 
 var m *bool //迁移数据库
 func init() {
-	name, _ := utils.FileName("/font/YaHei.ttf")
+	name, _ := utils.FileName("/view/font/YaHei.ttf")
 	fontPath := name
 	os.Setenv("FYNE_FONT", fontPath)
 	/*m = flag.Bool("m", false, "migrate tables")

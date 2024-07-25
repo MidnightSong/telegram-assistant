@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/gotd/td/tg"
 	"github.com/midnightsong/telegram-assistant/gotgproto/ext"
+	"github.com/midnightsong/telegram-assistant/utils"
+	"go.uber.org/zap"
 )
 
 var PrivateRepeatMsg bool
@@ -21,8 +23,9 @@ func HandlerPrivate(ctx *ext.Context, update *ext.Update) error {
 			Peer:     update.EffectiveChat().GetInputPeer(),
 			Big:      true,
 			MsgID:    update.EffectiveMessage.ID,
-			Reaction: []tg.ReactionClass{&tg.ReactionEmoji{Emoticon: "emoji"}},
+			Reaction: []tg.ReactionClass{&tg.ReactionEmoji{Emoticon: "👍"}},
 		}
+		utils.LogInfo(ctx.Context, "EffectiveChat:", zap.Any("EffectiveChat", update.EffectiveChat()))
 		ctx.SendReaction(update.EffectiveChat().GetID(), req)
 	}
 

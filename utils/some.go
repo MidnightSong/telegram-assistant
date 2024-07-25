@@ -2,6 +2,8 @@ package utils
 
 import (
 	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -41,4 +43,38 @@ func FileName(fileName string) (string, error) {
 	}
 
 	return appConfigPath, nil
+}
+
+func AesGcmEncrypt(plaintext, key, nonce []byte) (cipherText []byte, err error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	aesGcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	cipherText = aesGcm.Seal(nil, nonce, plaintext, nil)
+	return
+}
+
+func AesGcmDecrypt(cipherText, key, nonce []byte) (plaintext []byte, err error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	aesGcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	plaintext, err = aesGcm.Open(nil, nonce, cipherText, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return
 }

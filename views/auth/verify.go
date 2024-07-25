@@ -1,4 +1,4 @@
-package views
+package auth
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 )
 
 // 要求输入验证码
-func showVerify(app fyne.App) {
+func verifyWindow(app fyne.App) {
 	for {
 		time.Sleep(1 * time.Second)
 		if gotgproto.Logged {
@@ -42,7 +42,7 @@ func showVerify(app fyne.App) {
 }
 
 // 要求输入两步验证密码
-func showPassword(app fyne.App) {
+func passwordWindow(app fyne.App) {
 	for {
 		if gotgproto.Logged {
 			break

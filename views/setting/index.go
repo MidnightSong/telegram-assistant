@@ -20,25 +20,26 @@ var numberRegex = "(\\d{1,5})"
 
 func GetSettingView(window fyne.Window) *fyne.Container {
 
-	secretKey := binding.NewString()
-	secretKey.Set(config.Get("secretKey"))
-	secretKeyLabel := widget.NewLabel("激活码")
-	secretKeyEntry := widget.NewEntryWithData(secretKey)
-	secretKeyEntry.Password = true
+	authCode := binding.NewString()
+	_ = authCode.Set(config.Get("authCode"))
+	authCodeLabel := widget.NewLabel("激活码")
+	authCodeEntry := widget.NewEntryWithData(authCode)
+	authCodeEntry.Password = true
+	authCodeEntry.Validator = validation.NewRegexp("\\w+", "激活码不能为空！")
 
 	appId := binding.NewString()
-	appId.Set(config.Get("appId"))
+	_ = appId.Set(config.Get("appId"))
 	appIdLabel := widget.NewLabel("appId")
 	appIdEntry := newAppIDEntry(appId)
 
 	appHash := binding.NewString()
-	appHash.Set(config.Get("apiHash"))
+	_ = appHash.Set(config.Get("apiHash"))
 	appHashLabel := widget.NewLabel("apiHash")
 	appHashEntry := widget.NewEntryWithData(appHash)
 	appHashEntry.Password = true
 
 	socksIP := binding.NewString()
-	socksIP.Set(config.Get("socksIP"))
+	_ = socksIP.Set(config.Get("socksAddr"))
 	socksIPLabel := widget.NewLabel("IP:")
 	socksIPEntry := widget.NewEntry()
 	socksIPEntry.PlaceHolder = "例: 127.0.0.1"
@@ -46,7 +47,7 @@ func GetSettingView(window fyne.Window) *fyne.Container {
 	socksIPEntry.Validator = validation.NewRegexp(ipAddressRegex, "请输入正确的ip地址！")
 
 	socksPort := binding.NewString()
-	socksPort.Set(config.Get("socksPort"))
+	_ = socksPort.Set(config.Get("socksPort"))
 	socksPortLabel := widget.NewLabel("端口:")
 	socksPortEntry := widget.NewEntry()
 	socksPortEntry.PlaceHolder = "例: 8080"
@@ -63,7 +64,7 @@ func GetSettingView(window fyne.Window) *fyne.Container {
 			socksIPEntry.Text = ""
 			socksPortEntry.Text = ""
 		}
-		config.Set("socksOpen", fmt.Sprint(b))
+		_ = config.Set("socksOpen", fmt.Sprint(b))
 	}
 	socksOpen := widget.NewCheck("socks5 代理", checkSocks)
 
@@ -73,7 +74,7 @@ func GetSettingView(window fyne.Window) *fyne.Container {
 	socksOpen.Refresh()
 
 	configContainer := container.New(layout.NewFormLayout(),
-		secretKeyLabel, secretKeyEntry,
+		authCodeLabel, authCodeEntry,
 		appIdLabel, appIdEntry,
 		appHashLabel, appHashEntry,
 		layout.NewSpacer(), socksOpen,
@@ -81,9 +82,21 @@ func GetSettingView(window fyne.Window) *fyne.Container {
 		socksPortLabel, socksPortEntry)
 
 	confirmButton := &widget.Button{
-		Text:       "确认",
+		Text:       "保存",
 		Importance: widget.HighImportance,
 		OnTapped: func() {
+			if err := authCodeEntry.Validate(); err != nil {
+				dialog.NewError(err, window).Show()
+				return
+			}
+			if err := appIdEntry.Validate(); err != nil {
+				dialog.NewError(err, window).Show()
+				return
+			}
+			if err := appHashEntry.Validate(); err != nil {
+				dialog.NewError(err, window).Show()
+				return
+			}
 			//打开代理
 			if socksOpen.Checked {
 				if socksIPEntry.Validate() != nil || socksPortEntry.Validate() != nil {
@@ -92,18 +105,18 @@ func GetSettingView(window fyne.Window) *fyne.Container {
 				}
 				sIP, _ := socksIP.Get()
 				sPort, _ := socksPort.Get()
-				config.Set("socksIP", sIP)
+				config.Set("socksAddr", sIP)
 				config.Set("socksPort", sPort)
 			}
 
 			aid, _ := appId.Get()
 			ah, _ := appHash.Get()
-			sKey, _ := secretKey.Get()
+			sKey, _ := authCode.Get()
 			config.Set("appId", aid)
 			config.Set("apiHash", ah)
-			config.Set("secretKey", sKey)
+			config.Set("authCode", sKey)
 
-			dialog.NewInformation("成功", "保存配置成功", window).Show()
+			dialog.ShowInformation("成功", "保存配置成功", window)
 			//codeE.FocusLost() //显示输入框后面的感叹号
 			//e := codeE.Validate()
 			//if e != nil {
@@ -111,12 +124,11 @@ func GetSettingView(window fyne.Window) *fyne.Container {
 			//	codeE.FocusGained()
 			//	return
 			//}
-
 		},
 	}
 	//取消和确认按钮
 	cancelAndConfirmButton := container.NewHBox(
-		layout.NewSpacer(), layout.NewSpacer(), confirmButton)
+		layout.NewSpacer(), confirmButton, layout.NewSpacer())
 	return container.New(layout.NewVBoxLayout(), configContainer, cancelAndConfirmButton)
 }
 

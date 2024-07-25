@@ -1,4 +1,4 @@
-package dashbord
+package dashboard
 
 import (
 	"fyne.io/fyne/v2"
@@ -7,14 +7,16 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/midnightsong/telegram-assistant/assistant/msg"
+	"github.com/midnightsong/telegram-assistant/views/setting"
 	"image/color"
 	"strconv"
 )
 
-func getSettingView(app fyne.App) *container.TabItem {
+func getSettingView(window fyne.Window, app fyne.App) *container.TabItem {
 	configTab := container.NewAppTabs(
 		container.NewTabItem("私聊", privateSettingView(app)),
 		container.NewTabItem("群聊/频道", groupSettingView(app)),
+		container.NewTabItem("配置", setting.GetSettingView(window)),
 	)
 	return container.NewTabItemWithIcon("", theme.SettingsIcon(), container.NewVBox(configTab))
 }

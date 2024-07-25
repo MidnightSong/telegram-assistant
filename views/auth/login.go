@@ -1,4 +1,4 @@
-package views
+package auth
 
 import (
 	"fyne.io/fyne/v2"
@@ -8,15 +8,13 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/midnightsong/telegram-assistant/assistant"
 	"github.com/midnightsong/telegram-assistant/dao"
-	"github.com/midnightsong/telegram-assistant/views/dashbord"
 	"github.com/midnightsong/telegram-assistant/views/setting"
 )
 
-var config = dao.Config{}
+func LoginWindow(myApp fyne.App) {
+	loginWindow := myApp.NewWindow("个人号机器人")
 
-func ConfigWidget(window fyne.Window, myApp fyne.App) *fyne.Container {
 	config := dao.Config{}
 	phoneNumber := binding.NewString()
 	phoneNumber.Set(config.Get("phoneNumber"))
@@ -32,17 +30,11 @@ func ConfigWidget(window fyne.Window, myApp fyne.App) *fyne.Container {
 		activity.Show()
 		phoneNum, _ := phoneNumber.Get()
 		config.Set("phoneNumber", phoneNum)
-
-		go func() {
-			go assistant.Run(myApp)
-			go showVerify(myApp)
-			go showPassword(myApp)
-			dashbord.MsgNewWindow(window, myApp)
-		}()
+		ExpireWindow(loginWindow, myApp)
 	}
 	button = widget.NewButton("启动", loginButton)
 	showSetting := widget.NewButtonWithIcon("", theme.SettingsIcon(), func() {
-		showConfigDialog(window, myApp)
+		showSettingModal(loginWindow, myApp)
 	})
 	button.Importance = widget.HighImportance
 	loginContainer := container.NewVBox(phone, container.NewStack(button, activity))
@@ -51,7 +43,7 @@ func ConfigWidget(window fyne.Window, myApp fyne.App) *fyne.Container {
 
 	showSetting.Resize(fyne.NewSize(40, 40))
 	//固定窗口大小
-	window.SetFixedSize(true)
+	loginWindow.SetFixedSize(true)
 	/*window.Canvas().SetOnTypedKey(func(event *fyne.KeyEvent) {
 		winSize := window.Canvas().Size()
 		// Calculate new position based on window size
@@ -59,8 +51,12 @@ func ConfigWidget(window fyne.Window, myApp fyne.App) *fyne.Container {
 		newY := float32(winSize.Height) * 0.25
 		loginContainer.Move(fyne.NewPos(newX, newY))
 	})*/
+	loginWindow.SetContent(container.NewWithoutLayout(loginContainer, showSetting))
+	loginWindow.Resize(fyne.NewSize(400, 400))
+	loginWindow.CenterOnScreen()
+	loginWindow.Show()
 
-	return container.NewWithoutLayout(loginContainer, showSetting)
+	return
 }
 
 type phoneNumEntry struct {
@@ -75,12 +71,8 @@ func newPhoneNumEntry(phoneNum binding.String) *phoneNumEntry {
 	return p
 }
 
-func showConfigDialog(window fyne.Window, myApp fyne.App) {
-	//var d *dialog.CustomDialog
+func showSettingModal(window fyne.Window, myApp fyne.App) {
 	var up *widget.PopUp
-	/*d = dialog.NewCustomWithoutButtons("配置", settingView, window)
-	d.Resize(fyne.NewSize(300, 300))
-	d.Show()*/
 	closeButton := widget.NewButtonWithIcon("", theme.CancelIcon(), func() {
 		up.Hide()
 	})

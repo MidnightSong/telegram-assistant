@@ -1,4 +1,4 @@
-package dashbord
+package dashboard
 
 import (
 	"context"
@@ -10,11 +10,11 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/gotd/td/tg"
 	"github.com/midnightsong/telegram-assistant/assistant/msg"
-	"github.com/midnightsong/telegram-assistant/icon"
+	"github.com/midnightsong/telegram-assistant/gotgproto/storage"
 	"github.com/midnightsong/telegram-assistant/utils"
+	"github.com/midnightsong/telegram-assistant/views/icon"
 	"go.uber.org/zap"
 	"reflect"
-	"strings"
 	"time"
 )
 
@@ -43,13 +43,15 @@ func msgRtView() fyne.CanvasObject {
 }
 
 func openedDialogs() fyne.CanvasObject {
-	chats := getDialogs()
-	chatChecked := map[int]interface{}{}
+	//chats := getDialogs()
+	openDialogs := getOpenDialogs()
+	chatChecked := map[int]*dialogsInfo{}
 	var table *widget.Table
 	// 创建保存 Check widget 的二维数组
-	checks := make([][]*widget.Check, len(chats)+1)
+	checks := make([][]*widget.Check, len(openDialogs)+1)
+	col := 3
 	for i := range checks {
-		checks[i] = make([]*widget.Check, 4)
+		checks[i] = make([]*widget.Check, col)
 		for j := range checks[i] {
 			ck := widget.NewCheck("", nil)
 			ck.Hide()
@@ -57,7 +59,7 @@ func openedDialogs() fyne.CanvasObject {
 		}
 	}
 	//表格行列数量
-	tableLength := func() (int, int) { return len(chats), 4 }
+	tableLength := func() (int, int) { return len(openDialogs), col }
 	//初始化单元格
 	initCell := func() fyne.CanvasObject {
 		label := widget.NewLabel("")
@@ -73,23 +75,21 @@ func openedDialogs() fyne.CanvasObject {
 			allCheck.OnChanged = func(b bool) {
 				if b {
 					for i := range checks {
-						/*for j := range checks[i] {
-							checks[i][j].Checked = b
-							checks[i][j].Refresh()
-						}*/
 						checks[i][0].Checked = b
 						checks[i][0].Refresh()
 						//第0行check是标题栏
 						if i == 0 {
 							continue
 						}
-						chatChecked[i-1] = chats[i-1]
+						chatChecked[i-1] = openDialogs[i-1]
 					}
 					utils.LogInfo(context.Background(), "选中的chat：", zap.Any("map", chatChecked))
 					return
 				}
 				for i := range chatChecked {
 					delete(chatChecked, i)
+					checks[i][0].Checked = b
+					checks[i][0].Refresh()
 				}
 				utils.LogInfo(context.Background(), "选中的chat：", zap.Any("map", chatChecked))
 			}
@@ -101,10 +101,6 @@ func openedDialogs() fyne.CanvasObject {
 			c.Objects[0].(*widget.Label).Show()
 		case 2:
 			c.Objects[1] = checks[id.Row+1][id.Col]
-			c.Objects[0].(*widget.Label).SetText("ID")
-			c.Objects[0].(*widget.Label).Show()
-		case 3:
-			c.Objects[1] = checks[id.Row+1][id.Col]
 			c.Objects[0].(*widget.Label).SetText("类型")
 			c.Objects[0].(*widget.Label).Show()
 		}
@@ -113,8 +109,6 @@ func openedDialogs() fyne.CanvasObject {
 	//单元格更新
 	updateCell := func(id widget.TableCellID, cell fyne.CanvasObject) {
 		c := cell.(*fyne.Container)
-		t := reflect.TypeOf(chats[id.Row]).String()
-		v := reflect.ValueOf(chats[id.Row]).Elem()
 		switch id.Col {
 		case 0:
 			c.Objects[0].(*widget.Label).Hide()
@@ -123,43 +117,30 @@ func openedDialogs() fyne.CanvasObject {
 			c.Objects[1] = check
 			check.OnChanged = func(b bool) {
 				if b {
-					chatChecked[id.Row] = chats[id.Row]
+					chatChecked[id.Row] = openDialogs[id.Row]
 					utils.LogInfo(context.Background(), "选中的chat：", zap.Any("map", chatChecked))
 					return
 				}
 				delete(chatChecked, id.Row)
-				//fmt.Printf("Check Row:%d Col: %d \n", id.Row+1, id.Col)
 				utils.LogInfo(context.Background(), "选中的chat：", zap.Any("map", chatChecked))
 			}
 			check.Show()
 		case 1:
-			var title string
-			if strings.Contains(t, "User") {
-				title = v.FieldByName("FirstName").String() + " " + v.FieldByName("LastName").String()
-			} else {
-				title = v.FieldByName("Title").String()
-			}
 			c.Objects[1] = checks[id.Row+1][id.Col]
-			c.Objects[0].(*widget.Label).SetText(title)
+			c.Objects[0].(*widget.Label).SetText(openDialogs[id.Row].title)
 			c.Objects[0].(*widget.Label).Show()
 		case 2:
-			ID := v.FieldByName("ID")
-			c.Objects[1] = checks[id.Row+1][id.Col]
-			c.Objects[0].(*widget.Label).SetText(fmt.Sprint(ID.Int()))
-			c.Objects[0].(*widget.Label).Show()
-		case 3:
 			c.Objects[1] = checks[id.Row+1][id.Col]
 			c.Objects[0].(*widget.Label).Show()
-			if strings.Contains(t, "User") {
-				isBot := v.FieldByName("Bot").Bool()
-				if isBot {
+			if openDialogs[id.Row].EntityType == storage.TypeUser {
+				if openDialogs[id.Row].bot {
 					c.Objects[0].(*widget.Label).SetText("机器人")
-				} else {
-					c.Objects[0].(*widget.Label).SetText("用户")
+					return
 				}
-			} else {
-				c.Objects[0].(*widget.Label).SetText("群组/频道")
+				c.Objects[0].(*widget.Label).SetText("用户")
+				return
 			}
+			c.Objects[0].(*widget.Label).SetText("群组/频道")
 		}
 	}
 	table = widget.NewTable(tableLength, initCell, updateCell)
@@ -167,19 +148,18 @@ func openedDialogs() fyne.CanvasObject {
 	table.UpdateHeader = updateHeader
 	table.ShowHeaderRow = true
 	table.SetColumnWidth(1, 250)
-	table.SetColumnWidth(2, 100)
-	table.SetColumnWidth(3, 80)
+	table.SetColumnWidth(2, 80)
 	//名字太长，把行高弄高一点
-	for index, chat := range chats {
+	/*for index, chat := range chats {
 		v := reflect.ValueOf(chat).Elem()
 		title := v.FieldByName("Title").String()
 		if len(title) > 46 {
 			table.SetRowHeight(index, 50)
 		}
-	}
+	}*/
 	var refresh *widget.Button
 	refresh = widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {
-		chats = getDialogs()
+		openDialogs = getOpenDialogs()
 		table.Refresh()
 		go func() {
 			refresh.Disable()
@@ -195,28 +175,68 @@ func openedDialogs() fyne.CanvasObject {
 	return container.NewBorder(buttonsBox, nil, nil, nil, table)
 }
 
-func getDialogs() []interface{} {
+type dialogsInfo struct {
+	title string
+	storage.EntityType
+	peerId int64
+	bot    bool
+}
+
+func getOpenDialogs() []*dialogsInfo {
 	d, _ := tgClient.API().MessagesGetDialogs(context.Background(), &tg.MessagesGetDialogsRequest{
 		OffsetPeer: &tg.InputPeerEmpty{}})
 	apiDialogs := reflect.ValueOf(d)
 	allChats := apiDialogs.Elem().FieldByName("Chats").Interface().([]tg.ChatClass)
-	//allChats := d.(*tg.MessagesDialogsSlice).Chats
 	allUsers := apiDialogs.Elem().FieldByName("Users").Interface().([]tg.UserClass)
-	//allUsers := d.(*tg.MessagesDialogsSlice).Users
-	var allDialogs []interface{}
-	for _, i := range allChats {
-		allDialogs = append(allDialogs, i)
-	}
-	for _, i := range allUsers {
-		allDialogs = append(allDialogs, i)
-	}
-	//排除已被禁止的群聊或频道
-	chats := allDialogs[:0]
-	for i := 0; i < len(allDialogs); i++ {
-		typeName := reflect.TypeOf(allDialogs[i]).String()
-		if !strings.Contains(typeName, "Forbidden") {
-			chats = append(chats, allDialogs[i])
+	Dialogs := apiDialogs.Elem().FieldByName("Dialogs").Interface().([]tg.DialogClass)
+	var dialogsInfos []*dialogsInfo
+	for _, i := range Dialogs {
+		peerClass := i.GetPeer()
+		switch peer := peerClass.(type) {
+		case *tg.PeerUser:
+			for _, user := range allUsers {
+				if u, ok := user.(*tg.User); ok {
+					if u.ID == peer.UserID {
+						info := &dialogsInfo{
+							title:      u.FirstName + u.LastName,
+							peerId:     u.ID,
+							EntityType: storage.TypeUser,
+							bot:        u.Bot,
+						}
+						dialogsInfos = append(dialogsInfos, info)
+						break
+					}
+				}
+			}
+		case *tg.PeerChat:
+			for _, chat := range allChats {
+				if c, ok := chat.(*tg.Chat); ok {
+					if c.ID == peer.ChatID {
+						info := &dialogsInfo{
+							title:      c.Title,
+							peerId:     c.ID,
+							EntityType: storage.TypeChat,
+						}
+						dialogsInfos = append(dialogsInfos, info)
+						break
+					}
+				}
+			}
+		case *tg.PeerChannel:
+			for _, chat := range allChats {
+				if c, ok := chat.(*tg.Channel); ok {
+					if c.ID == peer.ChannelID {
+						info := &dialogsInfo{
+							title:      c.Title,
+							peerId:     c.ID,
+							EntityType: storage.TypeChannel,
+						}
+						dialogsInfos = append(dialogsInfos, info)
+						break
+					}
+				}
+			}
 		}
 	}
-	return chats
+	return dialogsInfos
 }

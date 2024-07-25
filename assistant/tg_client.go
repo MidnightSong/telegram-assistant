@@ -2,25 +2,24 @@ package assistant
 
 import (
 	"fmt"
-	"fyne.io/fyne/v2"
+	"github.com/go-resty/resty/v2"
+	"github.com/gotd/td/telegram"
 	"github.com/gotd/td/telegram/dcs"
 	msg2 "github.com/midnightsong/telegram-assistant/assistant/msg"
 	"github.com/midnightsong/telegram-assistant/dao"
 	"github.com/midnightsong/telegram-assistant/gotgproto"
+	"github.com/midnightsong/telegram-assistant/gotgproto/dispatcher/handlers"
+	"github.com/midnightsong/telegram-assistant/gotgproto/dispatcher/handlers/filters"
 	"github.com/midnightsong/telegram-assistant/utils"
 	"golang.org/x/net/proxy"
 	"log"
 	"runtime"
 	"strconv"
-
-	"github.com/gotd/td/telegram"
-	"github.com/midnightsong/telegram-assistant/gotgproto/dispatcher/handlers"
-	"github.com/midnightsong/telegram-assistant/gotgproto/dispatcher/handlers/filters"
 )
 
 var NewClient = make(chan *gotgproto.Client)
 
-func Run(myApp fyne.App) error {
+func Run() error {
 	config := dao.Config{}
 	appid, _ := strconv.Atoi(config.Get("appId"))
 	goos := runtime.GOOS
@@ -74,4 +73,14 @@ func Run(myApp fyne.App) error {
 	}()
 	client.Idle()
 	return nil
+}
+
+var httpClient = resty.New()
+
+func auth() {
+	/*httpClient.Debug = true
+	request := httpClient.R()
+	response, err := request.Get("https://www.google.com")
+	if err != nil {
+	}*/
 }
