@@ -97,6 +97,13 @@ func GetSettingView(window fyne.Window) *fyne.Container {
 				dialog.NewError(err, window).Show()
 				return
 			}
+
+			aid, _ := appId.Get()
+			ah, _ := appHash.Get()
+			sKey, _ := authCode.Get()
+			config.Set("appId", aid)
+			config.Set("apiHash", ah)
+			config.Set("authCode", sKey)
 			//打开代理
 			if socksOpen.Checked {
 				if socksIPEntry.Validate() != nil || socksPortEntry.Validate() != nil {
@@ -108,15 +115,7 @@ func GetSettingView(window fyne.Window) *fyne.Container {
 				config.Set("socksAddr", sIP)
 				config.Set("socksPort", sPort)
 			}
-
-			aid, _ := appId.Get()
-			ah, _ := appHash.Get()
-			sKey, _ := authCode.Get()
-			config.Set("appId", aid)
-			config.Set("apiHash", ah)
-			config.Set("authCode", sKey)
-
-			dialog.ShowInformation("成功", "保存配置成功", window)
+			dialog.ShowInformation("成功", "保存配置成功,配置将在重启客户端后生效", window)
 			//codeE.FocusLost() //显示输入框后面的感叹号
 			//e := codeE.Validate()
 			//if e != nil {

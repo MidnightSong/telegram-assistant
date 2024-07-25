@@ -15,10 +15,10 @@ import (
 	"time"
 )
 
-func ExpireWindow(jumpInWindow fyne.Window, app fyne.App) {
-	pass := make(chan bool)
-	config := dao.Config{}
+var config = dao.Config{}
+var pass = make(chan bool)
 
+func ExpireWindow(jumpInWindow fyne.Window, app fyne.App) {
 	expireWindow := app.NewWindow("登录中")
 	text := "正在验证信息中"
 	label := widget.NewLabel(text)
@@ -45,7 +45,7 @@ func ExpireWindow(jumpInWindow fyne.Window, app fyne.App) {
 		progressBar,
 	)
 	expireWindow.SetContent(content)
-	expireWindow.Resize(fyne.NewSize(200, 200))
+	expireWindow.Resize(fyne.NewSize(200, 300))
 	expireWindow.CenterOnScreen()
 	expireWindow.SetFixedSize(true)
 	expireWindow.Show()
@@ -53,72 +53,18 @@ func ExpireWindow(jumpInWindow fyne.Window, app fyne.App) {
 		jumpInWindow.Close()
 	}
 	go func() {
-		authCode := config.Get("authCode")
-		appId := config.Get("appId")
-		apiHash := config.Get("apiHash")
-		//如果检测到配置为空，弹出输配置的窗口
-		if authCode == "" || appId == "" || apiHash == "" {
-			//输入激活码的窗口
-			inputted := make(chan bool)
-			settingWindow := showSettingWindow(app)
-			go func() {
-				for {
-					authCode = config.Get("authCode")
-					appId = config.Get("appId")
-					apiHash = config.Get("apiHash")
-					if authCode != "" && appId != "" && apiHash != "" {
-						inputted <- true
-						return
-					}
-					time.Sleep(time.Second)
-				}
-			}()
-			<-inputted
-			settingWindow.Close()
-		}
-		name, err := os.Hostname()
-		if err != nil {
-			errorDialog := dialog.NewError(errors.New("获取设备信息失败，请联系客服处理"+err.Error()), expireWindow)
-			errorDialog.Show()
-			errorDialog.SetOnClosed(func() {
-				os.Exit(0)
-			})
-			return
-		}
-		params := make(map[string]interface{})
-		params["device_id"] = name
-		params["uuid"] = authCode
-		params["timestamp"] = time.Now().Unix()
-		result := &AuthResponse{}
-		err = utils.HttpClient.Post("https://auth.seven-d76.workers.dev/acv", params, result)
-		if err != nil {
-			errorDialog := dialog.NewError(errors.New("内部错误："+err.Error()), expireWindow)
-			errorDialog.Show()
-			errorDialog.SetOnClosed(func() {
-				os.Exit(0)
-			})
-			return
-		}
-		if result.Code == 2000 {
-			pass <- true
-			return
-		}
-		errorDialog := dialog.NewError(errors.New("错误："+result.Msg), expireWindow)
-		errorDialog.Show()
-		errorDialog.SetOnClosed(func() {
-			_ = config.Set("authCode", "")
-			os.Exit(0)
-		})
-		return
-	}()
-	go func() {
-		if <-pass {
-			go assistant.Run()
-			go verifyWindow(app)
-			go passwordWindow(app)
-			dashboard.MsgNewWindow(expireWindow, app)
+		for {
+			go checkAut(expireWindow, app)
+			if <-pass {
+				go assistant.Run()
+				go verifyWindow(app)
+				go passwordWindow(app)
+				dashboard.MsgNewWindow(expireWindow, app)
+			}
+
 		}
 	}()
+
 }
 
 func showSettingWindow(app fyne.App) fyne.Window {
@@ -127,6 +73,7 @@ func showSettingWindow(app fyne.App) fyne.Window {
 	settingWindow.SetContent(setting.GetSettingView(settingWindow))
 	settingWindow.Resize(fyne.NewSize(300, 400))
 	settingWindow.Show()
+	settingWindow.CenterOnScreen()
 	return settingWindow
 }
 
@@ -139,4 +86,79 @@ type AuthResponse struct {
 		Duration  int    `json:"duration"`
 		Timestamp int    `json:"timestamp"`
 	} `json:"data"`
+}
+
+func waitingInput(app fyne.App) {
+	//输入激活码的窗口
+	inputted := make(chan bool)
+	settingWindow := showSettingWindow(app)
+	go func() {
+		for {
+			authCode := config.Get("authCode")
+			appId := config.Get("appId")
+			apiHash := config.Get("apiHash")
+			if authCode != "" && appId != "" && apiHash != "" {
+				inputted <- true
+				return
+			}
+			time.Sleep(time.Second * 2)
+		}
+	}()
+	<-inputted
+	settingWindow.Close()
+}
+func checkAut(window fyne.Window, app fyne.App) {
+	authCode := config.Get("authCode")
+	appId := config.Get("appId")
+	apiHash := config.Get("apiHash")
+	//如果检测到配置为空，弹出输配置的窗口
+	if authCode == "" || appId == "" || apiHash == "" {
+		waitingInput(app)
+	}
+	name, err := os.Hostname()
+	if err != nil {
+		errorDialog := dialog.NewError(errors.New("获取设备信息失败，请联系客服处理"+err.Error()), window)
+		errorDialog.Show()
+		errorDialog.SetOnClosed(func() {
+			os.Exit(0)
+		})
+		return
+	}
+	params := make(map[string]interface{})
+	params["device_id"] = name
+	params["uuid"] = config.Get("authCode")
+	params["timestamp"] = time.Now().Unix()
+	result := &AuthResponse{}
+	if config.Get("socksOpen") == "true" {
+		err = utils.HttpClient.SetSocks5(true, config.Get("socksAddr"), config.Get("socksPort"))
+		if err != nil {
+			dialog.NewError(err, window).Show()
+			pass <- false
+			return
+		}
+	} else {
+		_ = utils.HttpClient.SetSocks5(false, "", "")
+	}
+
+	err = utils.HttpClient.Post("https://auth.seven-d76.workers.dev/acv", params, result)
+	if err != nil {
+		errorDialog := dialog.NewError(errors.New("内部错误：\n"+err.Error()), window)
+		errorDialog.Show()
+		errorDialog.SetOnClosed(func() {
+			waitingInput(app)
+		})
+		pass <- false
+		return
+	}
+	if result.Code == 2000 {
+		pass <- true
+		return
+	}
+	errorDialog := dialog.NewError(errors.New("错误：\n"+result.Msg), window)
+	errorDialog.Show()
+	errorDialog.SetOnClosed(func() {
+		_ = config.Set("authCode", "")
+		pass <- false
+		return
+	})
 }

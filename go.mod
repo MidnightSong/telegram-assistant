@@ -5,11 +5,9 @@ go 1.21
 require (
 	fyne.io/fyne/v2 v2.5.0
 	github.com/AnimeKaizoku/cacher v1.0.1
-	github.com/forgoer/openssl v1.6.0
 	github.com/go-resty/resty/v2 v2.13.1
 	github.com/gotd/td v0.103.0
 	github.com/pkg/errors v0.9.1
-	github.com/stretchr/testify v1.9.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.27.0
 	gorm.io/gorm v1.25.7-0.20240204074919-46816ad31dde
@@ -43,7 +41,7 @@ require (
 	github.com/rymdport/portal v0.2.2 // indirect
 	github.com/srwiley/oksvg v0.0.0-20221011165216-be6e8873101c // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
-	github.com/super-l/machine-code v0.0.0-20240104080917-14388119a8dd // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 	github.com/yuin/goldmark v1.7.1 // indirect
 	golang.org/x/image v0.18.0 // indirect
 	golang.org/x/mobile v0.0.0-20231127183840-76ac6878050a // indirect

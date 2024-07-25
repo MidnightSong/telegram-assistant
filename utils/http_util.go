@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
-	"github.com/midnightsong/telegram-assistant/dao"
 	"github.com/pkg/errors"
 	"golang.org/x/net/proxy"
 	"net/http"
@@ -20,13 +19,9 @@ var HttpClient httpClient
 var restyCli = resty.New()
 var key, _ = hex.DecodeString("57227176a09c27191875e85ce2ccea571e415fd98038ccb21e892c4d7182bc3e")
 var iv, _ = hex.DecodeString("ff5097cd1d355f6d6f8d9225")
-var config = dao.Config{}
 
-func (cli *httpClient) Post(toUrl string, params map[string]interface{}, result any) error {
-	restyCli.Debug = true
-	if config.Get("socksOpen") == "true" {
-		address := config.Get("socksAddr")
-		port := config.Get("socksPort")
+func (cli *httpClient) SetSocks5(b bool, address string, port string) error {
+	if b {
 		proxyURL, _ := url.Parse(fmt.Sprintf("socks5://%s:%s", address, port))
 		dialer, err := proxy.FromURL(proxyURL, proxy.Direct)
 		if err != nil {
@@ -37,9 +32,14 @@ func (cli *httpClient) Post(toUrl string, params map[string]interface{}, result 
 	} else {
 		restyCli.RemoveProxy()
 	}
+	return nil
+}
+
+func (cli *httpClient) Post(toUrl string, params map[string]interface{}, result any) error {
+	restyCli.Debug = true
 
 	request := restyCli.R()
-	request.SetHeader("Content-Type", "application/json")
+	request.SetHeader("Content-Type", "text/plain; charset=UTF-8")
 	jsonStr, err := json.Marshal(params)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (cli *httpClient) Post(toUrl string, params map[string]interface{}, result 
 
 	response, err := request.SetBody(toString).Post(toUrl)
 	if err != nil {
-		return err
+		return errors.New("请求错误：请检查网络连接或代理设置")
 	}
 	if response.StatusCode() != http.StatusOK {
 		return errors.New("http status code:" + strconv.Itoa(response.StatusCode()))

@@ -2,7 +2,6 @@ package assistant
 
 import (
 	"fmt"
-	"github.com/go-resty/resty/v2"
 	"github.com/gotd/td/telegram"
 	"github.com/gotd/td/telegram/dcs"
 	msg2 "github.com/midnightsong/telegram-assistant/assistant/msg"
@@ -12,12 +11,11 @@ import (
 	"github.com/midnightsong/telegram-assistant/gotgproto/dispatcher/handlers/filters"
 	"github.com/midnightsong/telegram-assistant/utils"
 	"golang.org/x/net/proxy"
-	"log"
 	"runtime"
 	"strconv"
 )
 
-var NewClient = make(chan *gotgproto.Client)
+var NewClient = make(chan any)
 
 func Run() error {
 	config := dao.Config{}
@@ -52,7 +50,8 @@ func Run() error {
 
 	client, err := gotgproto.NewClient(appid, config.Get("apiHash"), gotgproto.ClientTypePhone(config.Get("phoneNumber")), opts)
 	if err != nil {
-		log.Fatalln("启动客户端失败:", err)
+		NewClient <- err.Error()
+		//log.Fatalln("启动客户端失败:", err)
 		return err
 	}
 	dispatcher := client.Dispatcher
@@ -73,14 +72,4 @@ func Run() error {
 	}()
 	client.Idle()
 	return nil
-}
-
-var httpClient = resty.New()
-
-func auth() {
-	/*httpClient.Debug = true
-	request := httpClient.R()
-	response, err := request.Get("https://www.google.com")
-	if err != nil {
-	}*/
 }

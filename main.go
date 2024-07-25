@@ -16,12 +16,6 @@ func init() {
 }
 
 func main() {
-	//flag.Parse()
-	/*if m != nil && *m {
-		dao.Migrate()
-		os.Exit(0)
-	}
-	*/
 	//dao.Migrate()
 
 	views.Run()
