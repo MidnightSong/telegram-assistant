@@ -5,24 +5,24 @@ import (
 	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/gotd/td/tg"
 	"github.com/midnightsong/telegram-assistant/assistant/msg"
 	"github.com/midnightsong/telegram-assistant/gotgproto/storage"
-	"github.com/midnightsong/telegram-assistant/utils"
 	"github.com/midnightsong/telegram-assistant/views/icon"
-	"go.uber.org/zap"
 	"reflect"
 	"time"
 )
 
-func getMsgView() *container.TabItem {
+func getMsgView(window fyne.Window) *container.TabItem {
 	msgTab := container.NewAppTabs(
 		container.NewTabItem("处理日志", msgRtView()),
-		container.NewTabItem("已打开的会话", openedDialogs()),
+		container.NewTabItem("已打开的会话", openedDialogs(window)),
 	)
+
 	return container.NewTabItemWithIcon("", theme.MailSendIcon(), msgTab)
 }
 
@@ -42,65 +42,63 @@ func msgRtView() fyne.CanvasObject {
 	return RtMsg
 }
 
-func openedDialogs() fyne.CanvasObject {
-	//chats := getDialogs()
+// 已选中的会话
+var chatChecked map[int]*dialogsInfo
+
+// openedDialogs 返回已打开的会话视图（表格）
+func openedDialogs(window fyne.Window) fyne.CanvasObject {
 	openDialogs := getOpenDialogs()
-	chatChecked := map[int]*dialogsInfo{}
+	chatChecked = map[int]*dialogsInfo{}
 	var table *widget.Table
-	// 创建保存 Check widget 的二维数组
-	checks := make([][]*widget.Check, len(openDialogs)+1)
+	checks := map[int]*widget.Check{}
 	col := 3
-	for i := range checks {
-		checks[i] = make([]*widget.Check, col)
-		for j := range checks[i] {
-			ck := widget.NewCheck("", nil)
-			ck.Hide()
-			checks[i][j] = ck
-		}
-	}
 	//表格行列数量
 	tableLength := func() (int, int) { return len(openDialogs), col }
 	//初始化单元格
 	initCell := func() fyne.CanvasObject {
 		label := widget.NewLabel("")
-		label.Wrapping = fyne.TextWrapWord
-		return container.NewStack(label, widget.NewCheck("", nil))
+		//文本末尾不够展示时，加入省略号
+		label.Truncation = fyne.TextTruncateEllipsis
+		check := widget.NewCheck("", nil)
+		check.Hide()
+		return container.NewStack(label, check)
 	}
 	//标题栏更新 标题栏的id.Row索引是-1
 	updateHeader := func(id widget.TableCellID, cell fyne.CanvasObject) {
 		c := cell.(*fyne.Container)
 		switch id.Col {
 		case 0:
-			allCheck := checks[0][0]
+			c.Objects[0].(*widget.Label).Hide()
+			allCheck := c.Objects[1].(*widget.Check)
+			allCheck.Show()
+			if checks[id.Row] == nil {
+				checks[id.Row] = allCheck
+			}
 			allCheck.OnChanged = func(b bool) {
 				if b {
 					for i := range checks {
-						checks[i][0].Checked = b
-						checks[i][0].Refresh()
-						//第0行check是标题栏
-						if i == 0 {
+						if i == -1 {
 							continue
 						}
-						chatChecked[i-1] = openDialogs[i-1]
+						checks[i].Checked = b
+						checks[i].Refresh()
+						chatChecked[i] = openDialogs[i]
 					}
-					utils.LogInfo(context.Background(), "选中的chat：", zap.Any("map", chatChecked))
 					return
 				}
 				for i := range chatChecked {
+					if i == -1 {
+						continue
+					}
 					delete(chatChecked, i)
-					checks[i][0].Checked = b
-					checks[i][0].Refresh()
+					checks[i].Checked = b
+					checks[i].Refresh()
 				}
-				utils.LogInfo(context.Background(), "选中的chat：", zap.Any("map", chatChecked))
 			}
-			allCheck.Show()
-			c.Objects[1] = allCheck
 		case 1:
-			c.Objects[1] = checks[id.Row+1][id.Col]
 			c.Objects[0].(*widget.Label).SetText("标题")
 			c.Objects[0].(*widget.Label).Show()
 		case 2:
-			c.Objects[1] = checks[id.Row+1][id.Col]
 			c.Objects[0].(*widget.Label).SetText("类型")
 			c.Objects[0].(*widget.Label).Show()
 		}
@@ -112,25 +110,22 @@ func openedDialogs() fyne.CanvasObject {
 		switch id.Col {
 		case 0:
 			c.Objects[0].(*widget.Label).Hide()
-			//因为标题栏的索引是-1，check组件的第1行作为表格的第0行
-			check := checks[id.Row+1][id.Col]
-			c.Objects[1] = check
+			check := c.Objects[1].(*widget.Check)
+			if checks[id.Row] == nil {
+				checks[id.Row] = check
+			}
 			check.OnChanged = func(b bool) {
 				if b {
 					chatChecked[id.Row] = openDialogs[id.Row]
-					utils.LogInfo(context.Background(), "选中的chat：", zap.Any("map", chatChecked))
 					return
 				}
 				delete(chatChecked, id.Row)
-				utils.LogInfo(context.Background(), "选中的chat：", zap.Any("map", chatChecked))
 			}
 			check.Show()
 		case 1:
-			c.Objects[1] = checks[id.Row+1][id.Col]
 			c.Objects[0].(*widget.Label).SetText(openDialogs[id.Row].title)
 			c.Objects[0].(*widget.Label).Show()
 		case 2:
-			c.Objects[1] = checks[id.Row+1][id.Col]
 			c.Objects[0].(*widget.Label).Show()
 			if openDialogs[id.Row].EntityType == storage.TypeUser {
 				if openDialogs[id.Row].bot {
@@ -143,11 +138,13 @@ func openedDialogs() fyne.CanvasObject {
 			c.Objects[0].(*widget.Label).SetText("群组/频道")
 		}
 	}
+
 	table = widget.NewTable(tableLength, initCell, updateCell)
 	table.CreateHeader = initCell
 	table.UpdateHeader = updateHeader
 	table.ShowHeaderRow = true
-	table.SetColumnWidth(1, 250)
+	table.SetColumnWidth(0, 30)
+	table.SetColumnWidth(1, 150)
 	table.SetColumnWidth(2, 80)
 	//名字太长，把行高弄高一点
 	/*for index, chat := range chats {
@@ -157,9 +154,14 @@ func openedDialogs() fyne.CanvasObject {
 			table.SetRowHeight(index, 50)
 		}
 	}*/
+	//刷新已打开会话的按钮
 	var refresh *widget.Button
 	refresh = widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {
 		openDialogs = getOpenDialogs()
+		//清除当前checks除了标题栏
+		headCheck := checks[-1]
+		checks = map[int]*widget.Check{}
+		checks[-1] = headCheck
 		table.Refresh()
 		go func() {
 			refresh.Disable()
@@ -169,7 +171,7 @@ func openedDialogs() fyne.CanvasObject {
 	})
 	var loudSpeaker *widget.Button
 	loudSpeaker = widget.NewButtonWithIcon("", icon.GetIcon(icon.LoudSpeaker), func() {
-		fmt.Println("点了一下广播按钮")
+		ShowSendMsgModal(window)
 	})
 	buttonsBox := container.NewHBox(loudSpeaker, layout.NewSpacer(), refresh)
 	return container.NewBorder(buttonsBox, nil, nil, nil, table)
@@ -239,4 +241,67 @@ func getOpenDialogs() []*dialogsInfo {
 		}
 	}
 	return dialogsInfos
+}
+
+func ShowSendMsgModal(window fyne.Window) {
+	var up *widget.PopUp
+	title := widget.NewLabel("向已选中的会话群发消息")
+	closeButton := widget.NewButtonWithIcon("", theme.CancelIcon(), func() {
+		up.Hide()
+	})
+	closeButton.Importance = widget.LowImportance
+	inputMsg := widget.NewMultiLineEntry()
+	sendMsgActivity := widget.NewActivity()
+	var returnMsgButton *widget.Button
+	var sendMsgButton *widget.Button
+
+	//init buttons
+	var sentMsgId map[int64]int //保存上一次发送的消息的id
+	returnMsgButton = widget.NewButtonWithIcon("撤回", icon.GetIcon(icon.TelegramReturn), func() {
+		dialog.ShowConfirm("撤回", "确定要撤回上一次发出的所有消息吗？", func(yes bool) {
+			if yes {
+				for chatId, msgId := range sentMsgId {
+					err := msg.DeleteMessage(chatId, msgId)
+					if err != nil {
+						msg.AddLog(fmt.Sprintf("撤回消息失败：%s", err.Error()))
+						continue
+					}
+				}
+				returnMsgButton.Disable()
+			}
+		}, window)
+	})
+	returnMsgButton.Importance = widget.DangerImportance
+	returnMsgButton.Disable()
+	sendMsgButton = widget.NewButtonWithIcon("发送", icon.GetIcon(icon.Telegram), func() {
+		if inputMsg.Text == "" {
+			return
+		}
+		sendMsgActivity.Start()
+		sendMsgActivity.Show()
+		sendMsgButton.Disable()
+		sentMsgId = make(map[int64]int)
+		for _, chat := range chatChecked {
+			msgId, err := msg.SendMessage(chat.peerId, inputMsg.Text)
+			if err != nil {
+				msg.AddLog(err.Error())
+				continue
+			}
+			sentMsgId[chat.peerId] = msgId
+			time.Sleep(time.Millisecond * 100)
+		}
+		sendMsgActivity.Stop()
+		sendMsgActivity.Hide()
+		sendMsgButton.Enable()
+		returnMsgButton.Enable()
+		dialog.ShowInformation("", "消息已发送完毕", window)
+	})
+	sendMsgButton.Importance = widget.HighImportance
+
+	topBox := container.NewHBox(title, layout.NewSpacer(), closeButton)
+	bottomBox := container.NewHBox(returnMsgButton, layout.NewSpacer(), container.NewStack(sendMsgActivity, sendMsgButton))
+	layoutBox := container.NewBorder(topBox, bottomBox, nil, nil, inputMsg)
+	up = widget.NewModalPopUp(layoutBox, window.Canvas())
+	up.Show()
+	up.Resize(fyne.NewSize(300, 300))
 }

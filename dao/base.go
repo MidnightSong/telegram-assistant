@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"github.com/midnightsong/telegram-assistant/entities"
 	"github.com/midnightsong/telegram-assistant/utils"
 	"sync"
 
@@ -11,24 +12,25 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-var dir, _ = utils.FileName("/cache.db")
-var dial = sqlite.Open(dir)
-var SqlSession = sessionMaker.SqlSession(dial)
+var SqlSession *sessionMaker.SqlSessionConstructor
 var (
 	_once sync.Once
 	_db   *gorm.DB
 )
+var DbPath string
 
 func GetDb() *gorm.DB {
 	_once.Do(func() {
 		var err error
+		var dial = sqlite.Open(DbPath)
+		SqlSession = sessionMaker.SqlSession(dial)
 		_db, err = gorm.Open(dial, &gorm.Config{
 			SkipDefaultTransaction: true,
 			Logger:                 logger.Default.LogMode(logger.Silent),
 		})
 		d, _ := _db.DB()
 		d.SetMaxOpenConns(100)
-		//_ = _db.AutoMigrate(&entities.FwdMsg{}, &entities.Config{})
+		_ = _db.AutoMigrate(&entities.FwdMsg{}, &entities.Config{})
 		if err != nil {
 			utils.LogError(context.TODO(), err.Error())
 		}

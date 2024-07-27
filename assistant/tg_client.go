@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/gotd/td/telegram"
 	"github.com/gotd/td/telegram/dcs"
-	msg2 "github.com/midnightsong/telegram-assistant/assistant/msg"
+	"github.com/midnightsong/telegram-assistant/assistant/msg"
 	"github.com/midnightsong/telegram-assistant/dao"
 	"github.com/midnightsong/telegram-assistant/gotgproto"
 	"github.com/midnightsong/telegram-assistant/gotgproto/dispatcher/handlers"
@@ -16,6 +16,7 @@ import (
 )
 
 var NewClient = make(chan any)
+var Cli *gotgproto.Client
 
 func Run() error {
 	config := dao.Config{}
@@ -62,12 +63,13 @@ func Run() error {
 	//dispatcher.AddHandler(handlers.NewCallbackQuery(filters.CallbackQuery.Prefix("cb_"), buttonCallback))
 	// This Message Handler will call our echo function on new messages
 	//dispatcher.AddHandlerToGroup(handlers.NewMessage(filters.Message.Text, echo), 1)
-	dispatcher.AddHandlerToGroup(handlers.NewMessage(filters.Message.ChatType(filters.ChatTypeChat), msg2.HandlerGroups), 1) //普通群
+	dispatcher.AddHandlerToGroup(handlers.NewMessage(filters.Message.ChatType(filters.ChatTypeChat), msg.HandlerGroups), 1) //普通群
 	//dispatcher.AddHandlerToGroup(handlers.NewMessage(filters.Message.ChatType(filters.ChatTypeChannel), msg.HandlerGroups), 2) //超级群
-	dispatcher.AddHandlerToGroup(handlers.NewMessage(filters.Message.ChatType(filters.ChatTypeUser), msg2.HandlerPrivate), 3)
+	dispatcher.AddHandlerToGroup(handlers.NewMessage(filters.Message.ChatType(filters.ChatTypeUser), msg.HandlerPrivate), 3)
 
 	fmt.Printf("客户端 (@%s) 已启动...\n", client.Self.Username)
 	go func() {
+		msg.Client = client
 		NewClient <- client
 	}()
 	client.Idle()

@@ -8,7 +8,7 @@ import (
 )
 
 func Run() {
-	myApp := app.New()
+	myApp := app.NewWithID("com.song.assistant")
 	/*if desk, ok := myApp.(desktop.App); ok {
 		m := fyne.NewMenu("Telegram Bot",
 			fyne.NewMenuItem("显示", func() {
@@ -16,11 +16,20 @@ func Run() {
 			}))
 		desk.SetSystemTrayMenu(m)
 	}*/
-	d, err := dao.Sessions{}.GetSession(entities.Sessions{Version: 1})
+	s := myApp.Storage()
+	path := s.RootURI().String()
+
+	/*	create, err := s.Create("../cache.db")
+		if err == nil {
+			create.Close()
+		}*/
+
+	dao.DbPath = path + "/cache.db"
+	_, err := dao.Sessions{}.GetSession(entities.Sessions{Version: 1})
 	if err != nil {
 		auth.LoginWindow(myApp)
 	} else {
-		auth.ExpireWindow(nil, myApp, d)
+		auth.ExpireWindow(nil, myApp)
 	}
 
 	myApp.Run()

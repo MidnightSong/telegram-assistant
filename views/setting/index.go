@@ -9,6 +9,7 @@ import (
 	"fyne.io/fyne/v2/data/validation"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/midnightsong/telegram-assistant/dao"
 	"strconv"
@@ -18,11 +19,22 @@ var config = dao.Config{}
 var ipAddressRegex = "((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)"
 var numberRegex = "(\\d{1,5})"
 
+func ShowSettingModal(window fyne.Window) {
+	var up *widget.PopUp
+	closeButton := widget.NewButtonWithIcon("", theme.CancelIcon(), func() {
+		up.Hide()
+	})
+	closeButton.Importance = widget.LowImportance
+	box := container.NewVBox(
+		container.NewHBox(widget.NewLabel("设置"), layout.NewSpacer(), closeButton),
+		GetSettingView(window))
+	up = widget.NewModalPopUp(box, window.Canvas())
+
+	up.Show()
+	up.Resize(fyne.NewSize(300, 300))
+}
+
 func GetSettingView(window fyne.Window) *fyne.Container {
-	/*dir, _ := os.Getwd()
-	information := dialog.NewInformation("path", dir, window)
-	information.Resize(fyne.NewSize(300, 300))
-	information.Show()*/
 	authCode := binding.NewString()
 	_ = authCode.Set(config.Get("authCode"))
 	authCodeLabel := widget.NewLabel("激活码")

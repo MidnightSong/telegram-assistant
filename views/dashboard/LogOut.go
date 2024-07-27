@@ -20,13 +20,14 @@ func GetLogOutView(window fyne.Window) *container.TabItem {
 			peers.DeleteAll()
 		}
 	}
-
 	logOutButton = widget.NewButton("注销当前账号", func() {
 		dialog.NewConfirm("注销", "注销账号将会清除当前账号内所有记录，并退出程序，确认执行吗？", confirm, window).Show()
 	})
 	logOutButton.Importance = widget.DangerImportance
+	testButton := widget.NewButton("test", func() {
+		ShowSendMsgModal(window)
+	})
+	logOutBox := container.NewVBox(logOutButton, testButton)
 
-	logOutBox := container.NewVBox(logOutButton)
-
-	return container.NewTabItemWithIcon("", icon.GetIcon(icon.LogOut), logOutBox)
+	return container.NewTabItemWithIcon("", icon.GetIcon(icon.ShutDown), logOutBox)
 }

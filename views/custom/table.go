@@ -50,3 +50,13 @@ func (r *wrapLabelRenderer) Objects() []fyne.CanvasObject {
 }
 
 func (r *wrapLabelRenderer) Destroy() {}
+
+/*themes := container.NewGridWithColumns(2,
+widget.NewButton("Dark", func() {
+	a.Settings().SetTheme(&forcedVariant{Theme: theme.DefaultTheme(), variant: theme.VariantDark})
+}),
+widget.NewButton("Light", func() {
+	a.Settings().SetTheme(&forcedVariant{Theme: theme.DefaultTheme(), variant: theme.VariantLight})
+}),
+)
+*/

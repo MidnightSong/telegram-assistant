@@ -42,7 +42,7 @@ func TestDec(t *testing.T) {
 	iv := "ff5097cd1d355f6d6f8d9225"
 	decodeKey, _ := hex.DecodeString(key)
 	decodeIv, _ := hex.DecodeString(iv)
-	str := "0DoLgJMAMV6uacvTUs2YlSPcd1y+ayueIPMWt6mHkpFxVLYC/qmdv3zurLr2oUN38O+fs2RODpVGCV4="
+	str := "0DoLgJMAMV6oacvQUs2YlSPcd1y+ayueIPMXn7iHr7y72j+CImIbCe6386mnTIPAwwnm50PzH4G03gZDggXWR1mkZWSM4IfziG327gRSxeDJZKnWKsZcGUNki6kiHKHw3wgPq5pdgIqeoUDtoRn1n0sXGHxc8Wq5B4ul41epGnmEVx1EiuyNq7E="
 	decodeString, _ := base64.StdEncoding.DecodeString(str)
 
 	plaintext, err := utils.AesGcmDecrypt(decodeString, decodeKey, decodeIv)

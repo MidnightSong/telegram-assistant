@@ -2,7 +2,11 @@ package msg
 
 import (
 	"fmt"
+	"github.com/gotd/td/telegram/message"
+	"github.com/gotd/td/telegram/message/styling"
 	"github.com/gotd/td/tg"
+	"github.com/midnightsong/telegram-assistant/dao"
+	"github.com/midnightsong/telegram-assistant/entities"
 	"github.com/midnightsong/telegram-assistant/gotgproto/ext"
 	"github.com/midnightsong/telegram-assistant/utils"
 	"regexp"
@@ -11,7 +15,6 @@ import (
 )
 
 var oMatch = regexp.MustCompile(`\w{8,}`)
-var GroupLog = make(chan string, 10)
 var GroupRepeatMsg bool              //重复机器人消息
 var GroupRepeatMsgReplyTo bool       //关联回复重复过的机器人消息
 var GroupHideSourceRepeatBotMsg bool //当重复消息时，是否隐藏来源
@@ -49,20 +52,20 @@ func groupRepeatMsgReplyToFunc(ctx *ext.Context, update *ext.Update) bool {
 			if replyTo.FwdFrom.FromID != nil {
 				AddLog(fmt.Sprint("关联回复机器人消息:\n", update.EffectiveMessage.Text))
 				//TODO 释放
-				/*answer := ctx.Sender.Answer(*update.Entities, update.UpdateClass.(message.AnswerableMessageUpdate))
+				answer := ctx.Sender.Answer(*update.Entities, update.UpdateClass.(message.AnswerableMessageUpdate))
 				f := entities.FwdMsg{
 					ChatID: update.EffectiveChat().GetID(),
 					MsgID:  replyTo.ID,
 				}
 				fwd, e := dao.FwdMsg{}.GetFwd(f)
-				go func() { GroupLog <- fmt.Sprint("回复原始消息", fwd.FwdMsgID) }()
+				go func() { AddLog(fmt.Sprint("回复原始消息", fwd.FwdMsgID)) }()
 				if e != nil {
 					//utils.LogInfo(ctx, "没有找到转发消息的原始id：可能已经删除")
 					AddLog(fmt.Sprint("没有找到转发消息的原始id：可能已经删除"))
 					return true
 				}
 				//查找自己转发消息的原始消息id
-				answer.Reply(fwd.FwdMsgID).Text(ctx, update.EffectiveMessage.Text)*/
+				answer.Reply(fwd.FwdMsgID).Text(ctx, update.EffectiveMessage.Text)
 				return true
 			}
 			return true
@@ -81,33 +84,31 @@ func GroupRepeatMsgFunc(ctx *ext.Context, update *ext.Update) bool {
 		}
 		for _, u := range update.Entities.Users {
 			if u.Bot { //仅重复机器人的查单消息
-				/*var u tg.UpdatesClass
-				var e error*/
+				var u tg.UpdatesClass
+				var e error
 				//当重复消息时，是否隐藏来源
 				if GroupHideSourceRepeatBotMsg {
 					//发送带图片的消息
-					//TODO 释放
 					go func() {
 						var username string
 						for _, user := range update.Entities.Users {
 							username += fmt.Sprintf("<@%s>+\n", user.Username)
 						}
-						AddLog(fmt.Sprint("重复发送订单号类型的消息,隐藏来源:\n 消息：%s \n发送者：%s"))
+						AddLog(fmt.Sprintf("重复发送订单号类型的消息,隐藏来源:\n 消息：%s \n发送者：%s", msg, username))
 					}()
-					/*p := update.EffectiveMessage.Media.(*tg.MessageMediaPhoto)
+					p := update.EffectiveMessage.Media.(*tg.MessageMediaPhoto)
 					photo := &tg.InputPhoto{
 						ID:            p.Photo.GetID(),
 						AccessHash:    p.Photo.(*tg.Photo).AccessHash,
 						FileReference: p.Photo.(*tg.Photo).FileReference,
 					}
 					b := ctx.Sender.Answer(*update.Entities, update.UpdateClass.(message.AnswerableMessageUpdate))
-					u, e = b.Photo(ctx, photo, styling.Unknown(update.EffectiveMessage.Text))*/
+					u, e = b.Photo(ctx, photo, styling.Unknown(update.EffectiveMessage.Text))
 				} else {
-					//TODO 释放
-					/*u, e = ctx.ForwardMessages(update.EffectiveChat().GetID(), update.EffectiveChat().GetID(),
-					&tg.MessagesForwardMessagesRequest{ID: []int{update.EffectiveMessage.ID},
-						SendAs: ctx.Self.AsInputPeer(),
-					})*/
+					u, e = ctx.ForwardMessages(update.EffectiveChat().GetID(), update.EffectiveChat().GetID(),
+						&tg.MessagesForwardMessagesRequest{ID: []int{update.EffectiveMessage.ID},
+							SendAs: ctx.Self.AsInputPeer(),
+						})
 					go func() {
 						var username string
 						for _, user := range update.Entities.Users {
@@ -116,11 +117,8 @@ func GroupRepeatMsgFunc(ctx *ext.Context, update *ext.Update) bool {
 						AddLog(fmt.Sprintf("重复发送订单号类型的消息,显示来源:\n 消息：%s \n发送者：%s", msg, username))
 					}()
 				}
-
-				//utils.LogInfo(ctx, "获取到机器人发送订单号类型消息："+msg)
-				/*if e != nil {
-					//utils.LogError(ctx, "重复机器人消息失败："+e.Error())
-					AddLog( "重复机器人消息失败：" + e.Error())
+				if e != nil {
+					AddLog("重复机器人消息失败：" + e.Error())
 					return true
 				}
 				f := &entities.FwdMsg{
@@ -133,7 +131,7 @@ func GroupRepeatMsgFunc(ctx *ext.Context, update *ext.Update) bool {
 				if e != nil {
 					//utils.LogError(ctx, "保存重复发送的消息id失败"+e.Error())
 					AddLog("保存重复发送的消息id失败" + e.Error())
-				}*/
+				}
 				return true
 			}
 		}
