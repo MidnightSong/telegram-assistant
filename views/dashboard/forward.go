@@ -31,12 +31,22 @@ func getForwardView(window fyne.Window) *container.TabItem {
 	var selectIndex string                            //选中的绑定对象的索引（右侧）
 	var clickOrigin func(id int)
 
-	tabTitle := widget.NewRichTextFromMarkdown("## 消息转发")
-	tabTitle.Segments[0].(*widget.TextSegment).Style.Alignment = fyne.TextAlignCenter //标题居中
-	listLen := func() int { return len(openedDialogs) }
+	topTitle := widget.NewRichTextFromMarkdown("## **消息转发**")
+	topTitle.Segments[0].(*widget.TextSegment).Style.Alignment = fyne.TextAlignCenter //标题居中
+	originText := widget.NewRichTextFromMarkdown("## 源会话")
+	//originText.Segments[0].(*widget.TextSegment).Style.Alignment = fyne.TextAlignLeading
+	targetText := widget.NewRichTextFromMarkdown("## 目标会话")
+	//targetText.Segments[0].(*widget.TextSegment).Style.Alignment = fyne.TextAlignTrailing
+	tmp := container.NewHBox(originText, layout.NewSpacer(), targetText)
+	topBox := container.NewVBox(topTitle, tmp)
 
+	listLen := func() int { return len(openedDialogs) }
 	createItem := func() fyne.CanvasObject {
-		return widget.NewLabel("尚无已打开的会话")
+		title := widget.NewLabel("尚无已打开的会话")
+		//title.Alignment = fyne.TextAlignLeading
+		titleType := widget.NewLabel("未知会话类型")
+		//titleType.Alignment = fyne.TextAlignTrailing
+		return container.NewHBox(title, layout.NewSpacer(), titleType)
 	}
 	updateItem := func(i widget.ListItemID, o fyne.CanvasObject) {
 		item := openedDialogs[i]
@@ -48,7 +58,8 @@ func getForwardView(window fyne.Window) *container.TabItem {
 		} else {
 			itemType = "群组|频道"
 		}
-		o.(*widget.Label).SetText(fmt.Sprintf("%s【%s】", openedDialogs[i].title, itemType))
+		o.(*fyne.Container).Objects[0].(*widget.Label).SetText(openedDialogs[i].title)
+		o.(*fyne.Container).Objects[2].(*widget.Label).SetText(fmt.Sprintf("【%s】", itemType))
 	}
 	originList := widget.NewList(listLen, createItem, updateItem) //会话来源的view（左侧）
 	clickOrigin = func(id widget.ListItemID) {
@@ -66,6 +77,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 		frsCache, _ = fr.Find(info.peerId) //已存库的绑定关系表
 		//先清空绑定会话目标view
 		ac.Items = make([]*widget.AccordionItem, 0)
+		time.Sleep(time.Millisecond * 15)
 		//展示绑定会话
 		for _, item := range frsCache {
 			to := dialogsMapById[item.ToPeerID]
@@ -80,9 +92,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 			onlyBot := widget.NewCheck("仅转发机器人的消息", func(b bool) {
 				if b != itemCopy.OnlyBot {
 					itemCopy.OnlyBot = b
-					var i int64
-					i = itemCopy.ID
-					fmt.Printf("点了一下：%s,下面的Id %d \n", info.title, i)
+					fmt.Printf("点了一下：%s,下面的Id %d \n", info.title, itemCopy.ID)
 					_ = fr.Add(itemCopy)
 				}
 			})
@@ -91,6 +101,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 				if b != itemCopy.ShowOrigin {
 					itemCopy.ShowOrigin = b
 					fmt.Printf("点了一下：%s,下面的 %s 显示消息来源开关\n", info.title, dialogsMapById[itemCopy.ToPeerID].title)
+					_ = fr.Add(itemCopy)
 				}
 			})
 			showOrigin.SetChecked(itemCopy.ShowOrigin)
@@ -98,6 +109,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 				if b != itemCopy.RelatedReply {
 					itemCopy.RelatedReply = b
 					fmt.Printf("点了一下：%s,下面的 %s 关联转发回复开关\n", info.title, dialogsMapById[itemCopy.ToPeerID].title)
+					_ = fr.Add(itemCopy)
 				}
 			})
 			relatedReply.SetChecked(itemCopy.RelatedReply)
@@ -115,6 +127,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 				if b != itemCopy.MustMedia {
 					itemCopy.MustMedia = b
 					fmt.Printf("点了一下：%s,下面的 %s 转发消息中必须带图片开关\n", info.title, dialogsMapById[itemCopy.ToPeerID].title)
+					_ = fr.Add(itemCopy)
 				}
 			})
 			mustMedia.SetChecked(itemCopy.MustMedia)
@@ -152,7 +165,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 			}
 		}
 		selectUnBinding.Options = unBindChatTitle
-		//ac.CloseAll()
+		ac.CloseAll()
 		//ac.Items[0].Detail.(*fyne.Container).Objects[0].(*widget.Check).Checked = true
 		rightBox.Show()
 	}
@@ -172,6 +185,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 			ShowOrigin:   true,
 			RelatedReply: true,
 			Regex:        "\\w{8,}",
+			MustMedia:    true,
 		}
 		_ = fr.Add(bind)
 		selectUnBinding.ClearSelected()
@@ -187,6 +201,6 @@ func getForwardView(window fyne.Window) *container.TabItem {
 	rightBox.Hide()
 	splitBox := container.NewHSplit(originList, rightBox)
 	splitBox.Offset = 0.3
-	border := container.NewBorder(tabTitle, nil, nil, nil, splitBox)
+	border := container.NewBorder(topBox, nil, nil, nil, splitBox)
 	return container.NewTabItemWithIcon("", icon.GetIcon(icon.Forward), border)
 }

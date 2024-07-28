@@ -20,6 +20,10 @@ var GroupRepeatMsgReplyTo bool       //关联回复重复过的机器人消息
 var GroupHideSourceRepeatBotMsg bool //当重复消息时，是否隐藏来源
 
 func HandlerGroups(ctx *ext.Context, update *ext.Update) error {
+	if update.EffectiveUser().Self {
+		return nil
+	}
+
 	now := time.Now().Unix()
 	if now-int64(update.EffectiveMessage.Date) > 60 {
 		//utils.LogInfo(ctx, "读取到1分钟之前的消息，忽略")

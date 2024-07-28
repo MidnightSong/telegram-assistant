@@ -5,11 +5,13 @@ import (
 	"github.com/gotd/td/tg"
 	"github.com/midnightsong/telegram-assistant/gotgproto"
 	mtp_errors "github.com/midnightsong/telegram-assistant/gotgproto/errors"
+	"time"
 )
 
 var Client *gotgproto.Client
 
 func SendMessage(chatId int64, msg string) (int, error) {
+	time.Sleep(time.Millisecond * 30)
 	result, err := Client.CreateContext().SendMessage(chatId, &tg.MessagesSendMessageRequest{Message: msg})
 	if err != nil {
 		return -1, err

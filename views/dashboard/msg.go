@@ -221,7 +221,6 @@ func ShowSendMsgModal(window fyne.Window) {
 				continue
 			}
 			sentMsgId[chat.peerId] = msgId
-			time.Sleep(time.Millisecond * 100)
 		}
 		sendMsgActivity.Stop()
 		sendMsgActivity.Hide()

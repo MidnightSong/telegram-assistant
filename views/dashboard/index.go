@@ -26,16 +26,6 @@ var cli any
 var tgClient *gotgproto.Client
 var openedDialogs []*dialogsInfo
 
-/*
-	func init() {
-		go func() {
-			for {
-				time.Sleep(10 * time.Second)
-				openedDialogs = refreshOpenedDialogs()
-			}
-		}()
-	}
-*/
 func MsgNewWindow(jumpInWindow fyne.Window, myApp fyne.App) {
 	cli = <-assistant.NewClient
 	switch c := cli.(type) {
