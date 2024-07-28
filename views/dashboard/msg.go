@@ -1,7 +1,6 @@
 package dashboard
 
 import (
-	"context"
 	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -9,18 +8,16 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/gotd/td/tg"
 	"github.com/midnightsong/telegram-assistant/assistant/msg"
 	"github.com/midnightsong/telegram-assistant/gotgproto/storage"
 	"github.com/midnightsong/telegram-assistant/views/icon"
-	"reflect"
 	"time"
 )
 
 func getMsgView(window fyne.Window) *container.TabItem {
 	msgTab := container.NewAppTabs(
 		container.NewTabItem("处理日志", msgRtView()),
-		container.NewTabItem("已打开的会话", openedDialogs(window)),
+		container.NewTabItem("已打开的会话", getOpenedDialogs(window)),
 	)
 
 	return container.NewTabItemWithIcon("", icon.GetIcon(icon.Telegram), msgTab)
@@ -46,14 +43,13 @@ func msgRtView() fyne.CanvasObject {
 var chatChecked map[int]*dialogsInfo
 
 // openedDialogs 返回已打开的会话视图（表格）
-func openedDialogs(window fyne.Window) fyne.CanvasObject {
-	openDialogs := getOpenDialogs()
+func getOpenedDialogs(window fyne.Window) fyne.CanvasObject {
 	chatChecked = map[int]*dialogsInfo{}
 	var table *widget.Table
 	checks := map[int]*widget.Check{}
 	col := 3
 	//表格行列数量
-	tableLength := func() (int, int) { return len(openDialogs), col }
+	tableLength := func() (int, int) { return len(openedDialogs), col }
 	//初始化单元格
 	initCell := func() fyne.CanvasObject {
 		label := widget.NewLabel("")
@@ -82,7 +78,7 @@ func openedDialogs(window fyne.Window) fyne.CanvasObject {
 						}
 						checks[i].Checked = b
 						checks[i].Refresh()
-						chatChecked[i] = openDialogs[i]
+						chatChecked[i] = openedDialogs[i]
 					}
 					return
 				}
@@ -116,19 +112,19 @@ func openedDialogs(window fyne.Window) fyne.CanvasObject {
 			}
 			check.OnChanged = func(b bool) {
 				if b {
-					chatChecked[id.Row] = openDialogs[id.Row]
+					chatChecked[id.Row] = openedDialogs[id.Row]
 					return
 				}
 				delete(chatChecked, id.Row)
 			}
 			check.Show()
 		case 1:
-			c.Objects[0].(*widget.Label).SetText(openDialogs[id.Row].title)
+			c.Objects[0].(*widget.Label).SetText(openedDialogs[id.Row].title)
 			c.Objects[0].(*widget.Label).Show()
 		case 2:
 			c.Objects[0].(*widget.Label).Show()
-			if openDialogs[id.Row].EntityType == storage.TypeUser {
-				if openDialogs[id.Row].bot {
+			if openedDialogs[id.Row].EntityType == storage.TypeUser {
+				if openedDialogs[id.Row].bot {
 					c.Objects[0].(*widget.Label).SetText("机器人")
 					return
 				}
@@ -157,11 +153,7 @@ func openedDialogs(window fyne.Window) fyne.CanvasObject {
 	//刷新已打开会话的按钮
 	var refresh *widget.Button
 	refresh = widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {
-		openDialogs = getOpenDialogs()
 		//清除当前checks除了标题栏
-		headCheck := checks[-1]
-		checks = map[int]*widget.Check{}
-		checks[-1] = headCheck
 		table.Refresh()
 		go func() {
 			refresh.Disable()
@@ -182,65 +174,6 @@ type dialogsInfo struct {
 	storage.EntityType
 	peerId int64
 	bot    bool
-}
-
-func getOpenDialogs() []*dialogsInfo {
-	d, _ := tgClient.API().MessagesGetDialogs(context.Background(), &tg.MessagesGetDialogsRequest{
-		OffsetPeer: &tg.InputPeerEmpty{}})
-	apiDialogs := reflect.ValueOf(d)
-	allChats := apiDialogs.Elem().FieldByName("Chats").Interface().([]tg.ChatClass)
-	allUsers := apiDialogs.Elem().FieldByName("Users").Interface().([]tg.UserClass)
-	Dialogs := apiDialogs.Elem().FieldByName("Dialogs").Interface().([]tg.DialogClass)
-	var dialogsInfos []*dialogsInfo
-	for _, i := range Dialogs {
-		peerClass := i.GetPeer()
-		switch peer := peerClass.(type) {
-		case *tg.PeerUser:
-			for _, user := range allUsers {
-				if u, ok := user.(*tg.User); ok {
-					if u.ID == peer.UserID {
-						info := &dialogsInfo{
-							title:      u.FirstName + u.LastName,
-							peerId:     u.ID,
-							EntityType: storage.TypeUser,
-							bot:        u.Bot,
-						}
-						dialogsInfos = append(dialogsInfos, info)
-						break
-					}
-				}
-			}
-		case *tg.PeerChat:
-			for _, chat := range allChats {
-				if c, ok := chat.(*tg.Chat); ok {
-					if c.ID == peer.ChatID {
-						info := &dialogsInfo{
-							title:      c.Title,
-							peerId:     c.ID,
-							EntityType: storage.TypeChat,
-						}
-						dialogsInfos = append(dialogsInfos, info)
-						break
-					}
-				}
-			}
-		case *tg.PeerChannel:
-			for _, chat := range allChats {
-				if c, ok := chat.(*tg.Channel); ok {
-					if c.ID == peer.ChannelID {
-						info := &dialogsInfo{
-							title:      c.Title,
-							peerId:     c.ID,
-							EntityType: storage.TypeChannel,
-						}
-						dialogsInfos = append(dialogsInfos, info)
-						break
-					}
-				}
-			}
-		}
-	}
-	return dialogsInfos
 }
 
 func ShowSendMsgModal(window fyne.Window) {

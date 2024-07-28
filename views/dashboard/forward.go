@@ -33,14 +33,13 @@ func getForwardView(window fyne.Window) *container.TabItem {
 
 	tabTitle := widget.NewRichTextFromMarkdown("## 消息转发")
 	tabTitle.Segments[0].(*widget.TextSegment).Style.Alignment = fyne.TextAlignCenter //标题居中
-	dialogs := getOpenDialogs()
+	listLen := func() int { return len(openedDialogs) }
 
-	listLen := func() int { return len(dialogs) }
 	createItem := func() fyne.CanvasObject {
 		return widget.NewLabel("尚无已打开的会话")
 	}
 	updateItem := func(i widget.ListItemID, o fyne.CanvasObject) {
-		item := dialogs[i]
+		item := openedDialogs[i]
 		itemType := ""
 		if item.bot {
 			itemType = "机器人"
@@ -49,13 +48,13 @@ func getForwardView(window fyne.Window) *container.TabItem {
 		} else {
 			itemType = "群组|频道"
 		}
-		o.(*widget.Label).SetText(fmt.Sprintf("%s【%s】", dialogs[i].title, itemType))
+		o.(*widget.Label).SetText(fmt.Sprintf("%s【%s】", openedDialogs[i].title, itemType))
 	}
 	originList := widget.NewList(listLen, createItem, updateItem) //会话来源的view（左侧）
 	clickOrigin = func(id widget.ListItemID) {
 		dialogsMapById = map[int64]*dialogsInfo{}     //方便通过peerId找到对应的会话信息,每次点击左侧时更新
 		dialogsMapByTitle = map[string]*dialogsInfo{} //方便通过会话名称找到对应的会话信息,每次点击左侧时更新
-		utils.Select(dialogs, func(p *dialogsInfo, index int) error {
+		utils.Select(openedDialogs, func(p *dialogsInfo, index int) error {
 			dialogsMapById[p.peerId] = p
 			dialogsMapByTitle[p.title] = p
 			return nil
@@ -63,7 +62,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 		//更新索引
 		listIndex = id
 		//显示当前选中会话所有绑定的会话
-		info := dialogs[id]                //当前选中的会话
+		info := openedDialogs[id]          //当前选中的会话
 		frsCache, _ = fr.Find(info.peerId) //已存库的绑定关系表
 		//先清空绑定会话目标view
 		ac.Items = make([]*widget.AccordionItem, 0)
@@ -164,7 +163,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 		if listIndex == -1 || selectIndex == "" { //默认值，尚未更新
 			return
 		}
-		origin := dialogs[listIndex]             //源会话
+		origin := openedDialogs[listIndex]       //源会话
 		target := dialogsMapByTitle[selectIndex] //绑定目标
 		bind := &entities.ForwardRelation{
 			PeerID:       origin.peerId,
