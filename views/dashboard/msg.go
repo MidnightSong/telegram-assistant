@@ -23,7 +23,7 @@ func getMsgView(window fyne.Window) *container.TabItem {
 		container.NewTabItem("已打开的会话", openedDialogs(window)),
 	)
 
-	return container.NewTabItemWithIcon("", theme.MailSendIcon(), msgTab)
+	return container.NewTabItemWithIcon("", icon.GetIcon(icon.Telegram), msgTab)
 }
 
 func msgRtView() fyne.CanvasObject {

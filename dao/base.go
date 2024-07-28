@@ -30,7 +30,7 @@ func GetDb() *gorm.DB {
 		})
 		d, _ := _db.DB()
 		d.SetMaxOpenConns(100)
-		_ = _db.AutoMigrate(&entities.FwdMsg{}, &entities.Config{})
+		_ = _db.AutoMigrate(&entities.FwdMsg{}, &entities.Config{}, &entities.ForwardRelation{})
 		if err != nil {
 			utils.LogError(context.TODO(), err.Error())
 		}

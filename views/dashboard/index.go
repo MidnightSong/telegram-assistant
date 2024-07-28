@@ -62,10 +62,11 @@ func MsgNewWindow(jumpInWindow fyne.Window, myApp fyne.App) {
 		getMsgView(dashboardWindow),            //消息栏
 		getSettingView(dashboardWindow, myApp), //设置栏
 		GetLogOutView(dashboardWindow),         //注销栏
+		getForwardView(dashboardWindow),        //搬运
 	)
 	leftTabs.SetTabLocation(container.TabLocationLeading)
 
-	dashboardWindow.Resize(fyne.NewSize(400, 576))
+	dashboardWindow.Resize(fyne.NewSize(1024, 576))
 	dashboardWindow.SetContent(leftTabs)
 	dashboardWindow.CenterOnScreen()
 	dashboardWindow.Show()
