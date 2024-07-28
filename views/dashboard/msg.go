@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/midnightsong/telegram-assistant/assistant"
 	"github.com/midnightsong/telegram-assistant/assistant/msg"
 	"github.com/midnightsong/telegram-assistant/gotgproto/storage"
 	"github.com/midnightsong/telegram-assistant/views/icon"
@@ -40,11 +41,11 @@ func msgRtView() fyne.CanvasObject {
 }
 
 // 已选中的会话
-var chatChecked map[int]*dialogsInfo
+var chatChecked map[int]*assistant.DialogsInfo
 
 // openedDialogs 返回已打开的会话视图（表格）
 func getOpenedDialogs(window fyne.Window) fyne.CanvasObject {
-	chatChecked = map[int]*dialogsInfo{}
+	chatChecked = map[int]*assistant.DialogsInfo{}
 	var table *widget.Table
 	checks := map[int]*widget.Check{}
 	col := 3
@@ -119,12 +120,12 @@ func getOpenedDialogs(window fyne.Window) fyne.CanvasObject {
 			}
 			check.Show()
 		case 1:
-			c.Objects[0].(*widget.Label).SetText(openedDialogs[id.Row].title)
+			c.Objects[0].(*widget.Label).SetText(openedDialogs[id.Row].Title)
 			c.Objects[0].(*widget.Label).Show()
 		case 2:
 			c.Objects[0].(*widget.Label).Show()
 			if openedDialogs[id.Row].EntityType == storage.TypeUser {
-				if openedDialogs[id.Row].bot {
+				if openedDialogs[id.Row].Bot {
 					c.Objects[0].(*widget.Label).SetText("机器人")
 					return
 				}
@@ -169,13 +170,6 @@ func getOpenedDialogs(window fyne.Window) fyne.CanvasObject {
 	return container.NewBorder(buttonsBox, nil, nil, nil, table)
 }
 
-type dialogsInfo struct {
-	title string
-	storage.EntityType
-	peerId int64
-	bot    bool
-}
-
 func ShowSendMsgModal(window fyne.Window) {
 	var up *widget.PopUp
 	title := widget.NewLabel("向已选中的会话群发消息")
@@ -215,12 +209,12 @@ func ShowSendMsgModal(window fyne.Window) {
 		sendMsgButton.Disable()
 		sentMsgId = make(map[int64]int)
 		for _, chat := range chatChecked {
-			msgId, err := msg.SendMessage(chat.peerId, inputMsg.Text)
+			msgId, err := msg.SendMessage(chat.PeerId, inputMsg.Text)
 			if err != nil {
 				msg.AddLog(err.Error())
 				continue
 			}
-			sentMsgId[chat.peerId] = msgId
+			sentMsgId[chat.PeerId] = msgId
 		}
 		sendMsgActivity.Stop()
 		sendMsgActivity.Hide()

@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/midnightsong/telegram-assistant/assistant"
 	"github.com/midnightsong/telegram-assistant/dao"
 	"github.com/midnightsong/telegram-assistant/entities"
 	"github.com/midnightsong/telegram-assistant/gotgproto/storage"
@@ -21,14 +22,14 @@ var fr = dao.ForwardRelation{}
 func getForwardView(window fyne.Window) *container.TabItem {
 	var frsCache []*entities.ForwardRelation
 	var unBindChatTitle = make([]string, 0)
-	var dialogsMapById = map[int64]*dialogsInfo{}     //方便通过peerId找到对应的会话信息,每次点击左侧时更新
-	var dialogsMapByTitle = map[string]*dialogsInfo{} //方便通过title找到对应的会话信息,每次点击左侧时更新
-	var listIndex = -1                                //选中会话来源view某行的索引
-	var ac *widget.Accordion                          //绑定会话关系的树形view（右侧）
-	var selectUnBinding *widget.Select                //选中会话尚未绑定会话的select（右侧）
-	var rightBox *fyne.Container                      //右侧view的整体布局
-	var addBindButton *widget.Button                  //添加绑定按钮（右侧）
-	var selectIndex string                            //选中的绑定对象的索引（右侧）
+	var dialogsMapById = map[int64]*assistant.DialogsInfo{}     //方便通过peerId找到对应的会话信息,每次点击左侧时更新
+	var dialogsMapByTitle = map[string]*assistant.DialogsInfo{} //方便通过title找到对应的会话信息,每次点击左侧时更新
+	var listIndex = -1                                          //选中会话来源view某行的索引
+	var ac *widget.Accordion                                    //绑定会话关系的树形view（右侧）
+	var selectUnBinding *widget.Select                          //选中会话尚未绑定会话的select（右侧）
+	var rightBox *fyne.Container                                //右侧view的整体布局
+	var addBindButton *widget.Button                            //添加绑定按钮（右侧）
+	var selectIndex string                                      //选中的绑定对象的索引（右侧）
 	var clickOrigin func(id int)
 
 	topTitle := widget.NewRichTextFromMarkdown("## **消息转发**")
@@ -51,30 +52,30 @@ func getForwardView(window fyne.Window) *container.TabItem {
 	updateItem := func(i widget.ListItemID, o fyne.CanvasObject) {
 		item := openedDialogs[i]
 		itemType := ""
-		if item.bot {
+		if item.Bot {
 			itemType = "机器人"
 		} else if item.EntityType == storage.TypeUser {
 			itemType = "用户"
 		} else {
 			itemType = "群组|频道"
 		}
-		o.(*fyne.Container).Objects[0].(*widget.Label).SetText(openedDialogs[i].title)
+		o.(*fyne.Container).Objects[0].(*widget.Label).SetText(openedDialogs[i].Title)
 		o.(*fyne.Container).Objects[2].(*widget.Label).SetText(fmt.Sprintf("【%s】", itemType))
 	}
 	originList := widget.NewList(listLen, createItem, updateItem) //会话来源的view（左侧）
 	clickOrigin = func(id widget.ListItemID) {
-		dialogsMapById = map[int64]*dialogsInfo{}     //方便通过peerId找到对应的会话信息,每次点击左侧时更新
-		dialogsMapByTitle = map[string]*dialogsInfo{} //方便通过会话名称找到对应的会话信息,每次点击左侧时更新
-		utils.Select(openedDialogs, func(p *dialogsInfo, index int) error {
-			dialogsMapById[p.peerId] = p
-			dialogsMapByTitle[p.title] = p
+		dialogsMapById = map[int64]*assistant.DialogsInfo{}     //方便通过peerId找到对应的会话信息,每次点击左侧时更新
+		dialogsMapByTitle = map[string]*assistant.DialogsInfo{} //方便通过会话名称找到对应的会话信息,每次点击左侧时更新
+		utils.Select(openedDialogs, func(p *assistant.DialogsInfo, index int) error {
+			dialogsMapById[p.PeerId] = p
+			dialogsMapByTitle[p.Title] = p
 			return nil
 		})
 		//更新索引
 		listIndex = id
 		//显示当前选中会话所有绑定的会话
 		info := openedDialogs[id]          //当前选中的会话
-		frsCache, _ = fr.Find(info.peerId) //已存库的绑定关系表
+		frsCache, _ = fr.Find(info.PeerId) //已存库的绑定关系表
 		//先清空绑定会话目标view
 		ac.Items = make([]*widget.AccordionItem, 0)
 		time.Sleep(time.Millisecond * 15)
@@ -92,7 +93,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 			onlyBot := widget.NewCheck("仅转发机器人的消息", func(b bool) {
 				if b != itemCopy.OnlyBot {
 					itemCopy.OnlyBot = b
-					fmt.Printf("点了一下：%s,下面的Id %d \n", info.title, itemCopy.ID)
+					fmt.Printf("点了一下：%s,下面的Id %d \n", info.Title, itemCopy.ID)
 					_ = fr.Add(itemCopy)
 				}
 			})
@@ -100,7 +101,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 			showOrigin := widget.NewCheck("显示消息来源", func(b bool) {
 				if b != itemCopy.ShowOrigin {
 					itemCopy.ShowOrigin = b
-					fmt.Printf("点了一下：%s,下面的 %s 显示消息来源开关\n", info.title, dialogsMapById[itemCopy.ToPeerID].title)
+					fmt.Printf("点了一下：%s,下面的 %s 显示消息来源开关\n", info.Title, dialogsMapById[itemCopy.ToPeerID].Title)
 					_ = fr.Add(itemCopy)
 				}
 			})
@@ -108,7 +109,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 			relatedReply := widget.NewCheck("关联转发回复(当显示来源)", func(b bool) {
 				if b != itemCopy.RelatedReply {
 					itemCopy.RelatedReply = b
-					fmt.Printf("点了一下：%s,下面的 %s 关联转发回复开关\n", info.title, dialogsMapById[itemCopy.ToPeerID].title)
+					fmt.Printf("点了一下：%s,下面的 %s 关联转发回复开关\n", info.Title, dialogsMapById[itemCopy.ToPeerID].Title)
 					_ = fr.Add(itemCopy)
 				}
 			})
@@ -126,7 +127,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 			mustMedia := widget.NewCheck("转发消息中必须带图片", func(b bool) {
 				if b != itemCopy.MustMedia {
 					itemCopy.MustMedia = b
-					fmt.Printf("点了一下：%s,下面的 %s 转发消息中必须带图片开关\n", info.title, dialogsMapById[itemCopy.ToPeerID].title)
+					fmt.Printf("点了一下：%s,下面的 %s 转发消息中必须带图片开关\n", info.Title, dialogsMapById[itemCopy.ToPeerID].Title)
 					_ = fr.Add(itemCopy)
 				}
 			})
@@ -147,7 +148,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 				conditionLabel, layout.NewSpacer(), regex, mustMedia, deleteBox)
 
 			//追加到绑定会话列表下
-			ac.Append(widget.NewAccordionItem(to.title, inTreeBox))
+			ac.Append(widget.NewAccordionItem(to.Title, inTreeBox))
 		}
 		//缓存当前会话尚未绑定的会话
 		unBindChatTitle = make([]string, 0)
@@ -161,7 +162,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 
 			}
 			if flag {
-				unBindChatTitle = append(unBindChatTitle, v.title)
+				unBindChatTitle = append(unBindChatTitle, v.Title)
 			}
 		}
 		selectUnBinding.Options = unBindChatTitle
@@ -179,8 +180,8 @@ func getForwardView(window fyne.Window) *container.TabItem {
 		origin := openedDialogs[listIndex]       //源会话
 		target := dialogsMapByTitle[selectIndex] //绑定目标
 		bind := &entities.ForwardRelation{
-			PeerID:       origin.peerId,
-			ToPeerID:     target.peerId,
+			PeerID:       origin.PeerId,
+			ToPeerID:     target.PeerId,
 			OnlyBot:      true,
 			ShowOrigin:   true,
 			RelatedReply: true,

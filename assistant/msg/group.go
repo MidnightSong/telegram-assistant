@@ -18,6 +18,16 @@ var oMatch = regexp.MustCompile(`\w{8,}`)
 var GroupRepeatMsg bool              //重复机器人消息
 var GroupRepeatMsgReplyTo bool       //关联回复重复过的机器人消息
 var GroupHideSourceRepeatBotMsg bool //当重复消息时，是否隐藏来源
+//var openedDialogs D
+
+func GroupBy[T any, K comparable](items []T, keyFunc func(T) K) map[K][]T {
+	result := make(map[K][]T)
+	for _, item := range items {
+		key := keyFunc(item)
+		result[key] = append(result[key], item)
+	}
+	return result
+}
 
 func HandlerGroups(ctx *ext.Context, update *ext.Update) error {
 	if update.EffectiveUser().Self {

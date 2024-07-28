@@ -24,7 +24,7 @@ import (
 var config = dao.Config{}
 var cli any
 var tgClient *gotgproto.Client
-var openedDialogs []*dialogsInfo
+var openedDialogs []*assistant.DialogsInfo
 
 func MsgNewWindow(jumpInWindow fyne.Window, myApp fyne.App) {
 	cli = <-assistant.NewClient
@@ -91,7 +91,7 @@ func MsgNewWindow(jumpInWindow fyne.Window, myApp fyne.App) {
 	})
 }
 
-func refreshOpenedDialogs() []*dialogsInfo {
+func refreshOpenedDialogs() []*assistant.DialogsInfo {
 	d, e := tgClient.API().MessagesGetDialogs(context.Background(), &tg.MessagesGetDialogsRequest{
 		OffsetPeer: &tg.InputPeerEmpty{}})
 	if e != nil {
@@ -101,7 +101,7 @@ func refreshOpenedDialogs() []*dialogsInfo {
 	allChats := apiDialogs.Elem().FieldByName("Chats").Interface().([]tg.ChatClass)
 	allUsers := apiDialogs.Elem().FieldByName("Users").Interface().([]tg.UserClass)
 	Dialogs := apiDialogs.Elem().FieldByName("Dialogs").Interface().([]tg.DialogClass)
-	var dialogsInfos []*dialogsInfo
+	var dialogsInfos []*assistant.DialogsInfo
 	for _, i := range Dialogs {
 		peerClass := i.GetPeer()
 		switch peer := peerClass.(type) {
@@ -109,11 +109,11 @@ func refreshOpenedDialogs() []*dialogsInfo {
 			for _, user := range allUsers {
 				if u, ok := user.(*tg.User); ok {
 					if u.ID == peer.UserID {
-						info := &dialogsInfo{
-							title:      u.FirstName + u.LastName,
-							peerId:     u.ID,
+						info := &assistant.DialogsInfo{
+							Title:      u.FirstName + u.LastName,
+							PeerId:     u.ID,
 							EntityType: storage.TypeUser,
-							bot:        u.Bot,
+							Bot:        u.Bot,
 						}
 						dialogsInfos = append(dialogsInfos, info)
 						break
@@ -124,9 +124,9 @@ func refreshOpenedDialogs() []*dialogsInfo {
 			for _, chat := range allChats {
 				if c, ok := chat.(*tg.Chat); ok {
 					if c.ID == peer.ChatID {
-						info := &dialogsInfo{
-							title:      c.Title,
-							peerId:     c.ID,
+						info := &assistant.DialogsInfo{
+							Title:      c.Title,
+							PeerId:     c.ID,
 							EntityType: storage.TypeChat,
 						}
 						dialogsInfos = append(dialogsInfos, info)
@@ -138,9 +138,9 @@ func refreshOpenedDialogs() []*dialogsInfo {
 			for _, chat := range allChats {
 				if c, ok := chat.(*tg.Channel); ok {
 					if c.ID == peer.ChannelID {
-						info := &dialogsInfo{
-							title:      c.Title,
-							peerId:     c.ID,
+						info := &assistant.DialogsInfo{
+							Title:      c.Title,
+							PeerId:     c.ID,
 							EntityType: storage.TypeChannel,
 						}
 						dialogsInfos = append(dialogsInfos, info)
