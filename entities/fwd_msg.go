@@ -1,11 +1,12 @@
 package entities
 
 type FwdMsg struct {
-	ID       uint64 `json:"id" gorm:"column:id;primary_key;autoIncrement:true"`
-	ChatID   int64  `json:"chat_id" gorm:"column:chat_id;not null"`
-	FwdMsgID int    `json:"fwd_msg_id" gorm:"column:fwd_msg_id;not null"`
-	MsgID    int    `json:"msg_id" gorm:"column:msg_id;not null"`
-	FwdTime  int64  `json:"fwd_time" gorm:"column:fwd_time;not null"`
+	ID           uint64 `gorm:"column:id;primary_key;autoIncrement:true"`
+	OriginChatID int64  `gorm:"column:origin_chat_id;not null"`
+	TargetChatID int64  `gorm:"column:target_chat_id;not null"`
+	FwdMsgID     int    `gorm:"column:origin_msg_id;not null"`
+	TargetMsgID  int    `gorm:"column:target_msg_id;not null"`
+	FwdTime      int64  `gorm:"column:fwd_time;not null"`
 }
 
 func (FwdMsg) TableName() string {

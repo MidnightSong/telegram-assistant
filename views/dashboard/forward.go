@@ -8,7 +8,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/midnightsong/telegram-assistant/assistant"
+	"github.com/midnightsong/telegram-assistant/assistant/msg"
 	"github.com/midnightsong/telegram-assistant/dao"
 	"github.com/midnightsong/telegram-assistant/entities"
 	"github.com/midnightsong/telegram-assistant/gotgproto/storage"
@@ -22,14 +22,14 @@ var fr = dao.ForwardRelation{}
 func getForwardView(window fyne.Window) *container.TabItem {
 	var frsCache []*entities.ForwardRelation
 	var unBindChatTitle = make([]string, 0)
-	var dialogsMapById = map[int64]*assistant.DialogsInfo{}     //方便通过peerId找到对应的会话信息,每次点击左侧时更新
-	var dialogsMapByTitle = map[string]*assistant.DialogsInfo{} //方便通过title找到对应的会话信息,每次点击左侧时更新
-	var listIndex = -1                                          //选中会话来源view某行的索引
-	var ac *widget.Accordion                                    //绑定会话关系的树形view（右侧）
-	var selectUnBinding *widget.Select                          //选中会话尚未绑定会话的select（右侧）
-	var rightBox *fyne.Container                                //右侧view的整体布局
-	var addBindButton *widget.Button                            //添加绑定按钮（右侧）
-	var selectIndex string                                      //选中的绑定对象的索引（右侧）
+	var dialogsMapById = map[int64]*msg.DialogsInfo{}     //方便通过peerId找到对应的会话信息,每次点击左侧时更新
+	var dialogsMapByTitle = map[string]*msg.DialogsInfo{} //方便通过title找到对应的会话信息,每次点击左侧时更新
+	var listIndex = -1                                    //选中会话来源view某行的索引
+	var ac *widget.Accordion                              //绑定会话关系的树形view（右侧）
+	var selectUnBinding *widget.Select                    //选中会话尚未绑定会话的select（右侧）
+	var rightBox *fyne.Container                          //右侧view的整体布局
+	var addBindButton *widget.Button                      //添加绑定按钮（右侧）
+	var selectIndex string                                //选中的绑定对象的索引（右侧）
 	var clickOrigin func(id int)
 
 	topTitle := widget.NewRichTextFromMarkdown("## **消息转发**")
@@ -64,9 +64,9 @@ func getForwardView(window fyne.Window) *container.TabItem {
 	}
 	originList := widget.NewList(listLen, createItem, updateItem) //会话来源的view（左侧）
 	clickOrigin = func(id widget.ListItemID) {
-		dialogsMapById = map[int64]*assistant.DialogsInfo{}     //方便通过peerId找到对应的会话信息,每次点击左侧时更新
-		dialogsMapByTitle = map[string]*assistant.DialogsInfo{} //方便通过会话名称找到对应的会话信息,每次点击左侧时更新
-		utils.Select(openedDialogs, func(p *assistant.DialogsInfo, index int) error {
+		dialogsMapById = map[int64]*msg.DialogsInfo{}     //方便通过peerId找到对应的会话信息,每次点击左侧时更新
+		dialogsMapByTitle = map[string]*msg.DialogsInfo{} //方便通过会话名称找到对应的会话信息,每次点击左侧时更新
+		utils.Select(openedDialogs, func(p *msg.DialogsInfo, index int) error {
 			dialogsMapById[p.PeerId] = p
 			dialogsMapByTitle[p.Title] = p
 			return nil
@@ -137,6 +137,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 					if b {
 						fmt.Printf("删除绑定对象：%d\n", itemCopy.ID)
 						fr.DeleteById(itemCopy.ID)
+						msg.CacheRelationsMap.Delete(itemCopy.PeerID) //删除处理接收消息处理模块的缓存
 						clickOrigin(listIndex)
 					}
 				}, window)
@@ -190,8 +191,9 @@ func getForwardView(window fyne.Window) *container.TabItem {
 		}
 		_ = fr.Add(bind)
 		selectUnBinding.ClearSelected()
-		time.Sleep(time.Millisecond * 15) //不休眠的话，两个组件刷新后可能重叠在一起
-		clickOrigin(listIndex)            //刷新右侧view
+		time.Sleep(time.Millisecond * 15)         //不休眠的话，两个组件刷新后可能重叠在一起
+		clickOrigin(listIndex)                    //刷新右侧view
+		msg.CacheRelationsMap.Delete(bind.PeerID) //删除处理接收消息处理模块的缓存
 	})
 	selectUnBinding = widget.NewSelect(unBindChatTitle, func(s string) {
 		selectIndex = s

@@ -23,3 +23,9 @@ func (ForwardRelation) Find(id int64) ([]*entities.ForwardRelation, error) {
 	err := GetDb().Where("peer_id = ?", id).Find(&frs).Error
 	return frs, err
 }
+
+func (ForwardRelation) All() []*entities.ForwardRelation {
+	var frs []*entities.ForwardRelation
+	GetDb().Find(&frs)
+	return frs
+}

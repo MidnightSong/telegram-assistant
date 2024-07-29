@@ -11,6 +11,7 @@ import (
 	"github.com/midnightsong/telegram-assistant/utils"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -18,29 +19,82 @@ var oMatch = regexp.MustCompile(`\w{8,}`)
 var GroupRepeatMsg bool              //重复机器人消息
 var GroupRepeatMsgReplyTo bool       //关联回复重复过的机器人消息
 var GroupHideSourceRepeatBotMsg bool //当重复消息时，是否隐藏来源
-//var openedDialogs D
+var fr = &dao.ForwardRelation{}
+var openedDialogs []*DialogsInfo
+var CacheRelationsMap = sync.Map{}
 
-func GroupBy[T any, K comparable](items []T, keyFunc func(T) K) map[K][]T {
-	result := make(map[K][]T)
-	for _, item := range items {
-		key := keyFunc(item)
-		result[key] = append(result[key], item)
+// Init 使用init函数初始化变量会导致App启动异常
+func Init() {
+	// 查出所有的绑定关系集合，然后通过源id进行分类后缓存
+	all := fr.All()
+	for _, d := range all {
+		key := d.PeerID
+		var relations []*entities.ForwardRelation
+		value, _ := CacheRelationsMap.Load(key)
+		if value != nil {
+			relations = value.([]*entities.ForwardRelation)
+		} else {
+			relations = []*entities.ForwardRelation{}
+		}
+		relations = append(relations, d)
+		CacheRelationsMap.Store(key, relations)
 	}
-	return result
 }
 
 func HandlerGroups(ctx *ext.Context, update *ext.Update) error {
+	if update.EffectiveMessage.IsService {
+		return nil
+	}
 	if update.EffectiveUser().Self {
 		return nil
 	}
-
 	now := time.Now().Unix()
 	if now-int64(update.EffectiveMessage.Date) > 60 {
 		//utils.LogInfo(ctx, "读取到1分钟之前的消息，忽略")
 		AddLog("读取到1分钟之前的消息，忽略")
 		return nil
 	}
-	//如果没有打开重复机器人消息的设置，则不进行后续处理
+
+	messageFromPeerId := update.EffectiveChat().GetID()
+	value, ok := CacheRelationsMap.Load(messageFromPeerId)
+	if !ok { //缓存中不存在，则从数据库查询
+		find, _ := fr.Find(messageFromPeerId)
+		if len(find) == 0 {
+			AddLog("收到消息，未绑定转发关系")
+			empty := make([]*entities.ForwardRelation, 0)
+			CacheRelationsMap.Store(messageFromPeerId, empty)
+			return nil
+		}
+		CacheRelationsMap.Store(messageFromPeerId, find)
+		value = find
+	}
+	relations := value.([]*entities.ForwardRelation)
+	//可能绑定了多个需要转发的目标
+	for _, relation := range relations {
+		replyTo := update.EffectiveMessage.ReplyToMessage
+		//如果是回复类型的消息、打开了关联回复、是回复自己的消息
+		if replyTo != nil && relation.RelatedReply && ctx.Self.ID == replyTo.FromID.(*tg.PeerUser).UserID {
+			fmt.Println("查找数据库，找到从哪里转发过来的")
+			f := entities.FwdMsg{
+				TargetChatID: update.EffectiveChat().GetID(),
+				TargetMsgID:  replyTo.ID,
+			}
+			fwd, e := dao.FwdMsg{}.GetFwd(f)
+			if e != nil {
+				fmt.Println("没找到消息，待测试")
+			}
+			fmt.Println("继续后面的", fwd)
+			continue
+		}
+
+		//仅转发机器人消息开关打开
+		if !relation.OnlyBot && !update.EffectiveUser().Bot {
+			continue
+		}
+
+	}
+
+	/*//如果没有打开重复机器人消息的设置，则不进行后续处理
 	if !GroupRepeatMsg {
 		return nil
 	}
@@ -52,7 +106,7 @@ func HandlerGroups(ctx *ext.Context, update *ext.Update) error {
 	if GroupRepeatMsgFunc(ctx, update) {
 		return nil
 	}
-
+	*/
 	return nil
 }
 
@@ -66,7 +120,7 @@ func groupRepeatMsgReplyToFunc(ctx *ext.Context, update *ext.Update) bool {
 			if replyTo.FwdFrom.FromID != nil {
 				AddLog(fmt.Sprint("关联回复机器人消息:\n", update.EffectiveMessage.Text))
 				//TODO 释放
-				answer := ctx.Sender.Answer(*update.Entities, update.UpdateClass.(message.AnswerableMessageUpdate))
+				/*answer := ctx.Sender.Answer(*update.Entities, update.UpdateClass.(message.AnswerableMessageUpdate))
 				f := entities.FwdMsg{
 					ChatID: update.EffectiveChat().GetID(),
 					MsgID:  replyTo.ID,
@@ -80,7 +134,7 @@ func groupRepeatMsgReplyToFunc(ctx *ext.Context, update *ext.Update) bool {
 				}
 				//查找自己转发消息的原始消息id
 				answer.Reply(fwd.FwdMsgID).Text(ctx, update.EffectiveMessage.Text)
-				return true
+				return true*/
 			}
 			return true
 		}
@@ -98,7 +152,6 @@ func GroupRepeatMsgFunc(ctx *ext.Context, update *ext.Update) bool {
 		}
 		for _, u := range update.Entities.Users {
 			if u.Bot { //仅重复机器人的查单消息
-				var u tg.UpdatesClass
 				var e error
 				//当重复消息时，是否隐藏来源
 				if GroupHideSourceRepeatBotMsg {
@@ -117,9 +170,9 @@ func GroupRepeatMsgFunc(ctx *ext.Context, update *ext.Update) bool {
 						FileReference: p.Photo.(*tg.Photo).FileReference,
 					}
 					b := ctx.Sender.Answer(*update.Entities, update.UpdateClass.(message.AnswerableMessageUpdate))
-					u, e = b.Photo(ctx, photo, styling.Unknown(update.EffectiveMessage.Text))
+					_, e = b.Photo(ctx, photo, styling.Unknown(update.EffectiveMessage.Text))
 				} else {
-					u, e = ctx.ForwardMessages(update.EffectiveChat().GetID(), update.EffectiveChat().GetID(),
+					_, e = ctx.ForwardMessages(update.EffectiveChat().GetID(), update.EffectiveChat().GetID(),
 						&tg.MessagesForwardMessagesRequest{ID: []int{update.EffectiveMessage.ID},
 							SendAs: ctx.Self.AsInputPeer(),
 						})
@@ -135,13 +188,13 @@ func GroupRepeatMsgFunc(ctx *ext.Context, update *ext.Update) bool {
 					AddLog("重复机器人消息失败：" + e.Error())
 					return true
 				}
-				f := &entities.FwdMsg{
+				/*f := &entities.FwdMsg{
 					ChatID:   update.EffectiveChat().GetID(),
 					FwdMsgID: update.EffectiveMessage.ID,
 					MsgID:    u.(*tg.Updates).Updates[0].(*tg.UpdateMessageID).ID,
 					FwdTime:  time.Now().Unix(),
 				}
-				e = dao.FwdMsg{}.Insert(f)
+				e = dao.FwdMsg{}.Insert(f)*/
 				if e != nil {
 					//utils.LogError(ctx, "保存重复发送的消息id失败"+e.Error())
 					AddLog("保存重复发送的消息id失败" + e.Error())

@@ -2,6 +2,7 @@ package views
 
 import (
 	"fyne.io/fyne/v2/app"
+	"github.com/midnightsong/telegram-assistant/assistant/msg"
 	"github.com/midnightsong/telegram-assistant/dao"
 	"github.com/midnightsong/telegram-assistant/entities"
 	"github.com/midnightsong/telegram-assistant/views/auth"
@@ -31,6 +32,8 @@ func Run() {
 	} else {
 		auth.ExpireWindow(nil, myApp)
 	}
-
+	go func() {
+		msg.Init()
+	}()
 	myApp.Run()
 }

@@ -24,7 +24,7 @@ import (
 var config = dao.Config{}
 var cli any
 var tgClient *gotgproto.Client
-var openedDialogs []*assistant.DialogsInfo
+var openedDialogs []*msg.DialogsInfo
 
 func MsgNewWindow(jumpInWindow fyne.Window, myApp fyne.App) {
 	cli = <-assistant.NewClient
@@ -91,7 +91,7 @@ func MsgNewWindow(jumpInWindow fyne.Window, myApp fyne.App) {
 	})
 }
 
-func refreshOpenedDialogs() []*assistant.DialogsInfo {
+func refreshOpenedDialogs() []*msg.DialogsInfo {
 	d, e := tgClient.API().MessagesGetDialogs(context.Background(), &tg.MessagesGetDialogsRequest{
 		OffsetPeer: &tg.InputPeerEmpty{}})
 	if e != nil {
@@ -101,7 +101,7 @@ func refreshOpenedDialogs() []*assistant.DialogsInfo {
 	allChats := apiDialogs.Elem().FieldByName("Chats").Interface().([]tg.ChatClass)
 	allUsers := apiDialogs.Elem().FieldByName("Users").Interface().([]tg.UserClass)
 	Dialogs := apiDialogs.Elem().FieldByName("Dialogs").Interface().([]tg.DialogClass)
-	var dialogsInfos []*assistant.DialogsInfo
+	var dialogsInfos []*msg.DialogsInfo
 	for _, i := range Dialogs {
 		peerClass := i.GetPeer()
 		switch peer := peerClass.(type) {
@@ -109,7 +109,7 @@ func refreshOpenedDialogs() []*assistant.DialogsInfo {
 			for _, user := range allUsers {
 				if u, ok := user.(*tg.User); ok {
 					if u.ID == peer.UserID {
-						info := &assistant.DialogsInfo{
+						info := &msg.DialogsInfo{
 							Title:      u.FirstName + u.LastName,
 							PeerId:     u.ID,
 							EntityType: storage.TypeUser,
@@ -124,7 +124,7 @@ func refreshOpenedDialogs() []*assistant.DialogsInfo {
 			for _, chat := range allChats {
 				if c, ok := chat.(*tg.Chat); ok {
 					if c.ID == peer.ChatID {
-						info := &assistant.DialogsInfo{
+						info := &msg.DialogsInfo{
 							Title:      c.Title,
 							PeerId:     c.ID,
 							EntityType: storage.TypeChat,
@@ -138,7 +138,7 @@ func refreshOpenedDialogs() []*assistant.DialogsInfo {
 			for _, chat := range allChats {
 				if c, ok := chat.(*tg.Channel); ok {
 					if c.ID == peer.ChannelID {
-						info := &assistant.DialogsInfo{
+						info := &msg.DialogsInfo{
 							Title:      c.Title,
 							PeerId:     c.ID,
 							EntityType: storage.TypeChannel,

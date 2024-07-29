@@ -1,4 +1,4 @@
-package assistant
+package msg
 
 import "github.com/midnightsong/telegram-assistant/gotgproto/storage"
 

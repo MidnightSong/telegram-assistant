@@ -65,7 +65,8 @@ func Run() error {
 	//dispatcher.AddHandlerToGroup(handlers.NewMessage(filters.Message.Text, echo), 1)
 	dispatcher.AddHandlerToGroup(handlers.NewMessage(filters.Message.ChatType(filters.ChatTypeChat), msg.HandlerGroups), 1) //普通群
 	//dispatcher.AddHandlerToGroup(handlers.NewMessage(filters.Message.ChatType(filters.ChatTypeChannel), msg.HandlerGroups), 2) //超级群
-	dispatcher.AddHandlerToGroup(handlers.NewMessage(filters.Message.ChatType(filters.ChatTypeUser), msg.HandlerPrivate), 3)
+	//dispatcher.AddHandlerToGroup(handlers.NewMessage(filters.Message.ChatType(filters.ChatTypeUser), msg.HandlerPrivate), 3)
+	dispatcher.AddHandlerToGroup(handlers.NewMessage(filters.Message.ChatType(filters.ChatTypeUser), msg.HandlerGroups), 2)
 
 	fmt.Printf("客户端 (@%s) 已启动...\n", client.Self.Username)
 	go func() {

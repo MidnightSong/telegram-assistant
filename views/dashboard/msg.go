@@ -8,7 +8,6 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	"github.com/midnightsong/telegram-assistant/assistant"
 	"github.com/midnightsong/telegram-assistant/assistant/msg"
 	"github.com/midnightsong/telegram-assistant/gotgproto/storage"
 	"github.com/midnightsong/telegram-assistant/views/icon"
@@ -20,7 +19,6 @@ func getMsgView(window fyne.Window) *container.TabItem {
 		container.NewTabItem("处理日志", msgRtView()),
 		container.NewTabItem("已打开的会话", getOpenedDialogs(window)),
 	)
-
 	return container.NewTabItemWithIcon("", icon.GetIcon(icon.Telegram), msgTab)
 }
 
@@ -41,11 +39,11 @@ func msgRtView() fyne.CanvasObject {
 }
 
 // 已选中的会话
-var chatChecked map[int]*assistant.DialogsInfo
+var chatChecked map[int]*msg.DialogsInfo
 
 // openedDialogs 返回已打开的会话视图（表格）
 func getOpenedDialogs(window fyne.Window) fyne.CanvasObject {
-	chatChecked = map[int]*assistant.DialogsInfo{}
+	chatChecked = map[int]*msg.DialogsInfo{}
 	var table *widget.Table
 	checks := map[int]*widget.Check{}
 	col := 3
