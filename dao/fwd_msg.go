@@ -11,8 +11,8 @@ func (FwdMsg) Insert(fm *entities.FwdMsg) error {
 	return GetDb().Create(fm).Error
 }
 
-func (FwdMsg) GetFwd(fm entities.FwdMsg) (r entities.FwdMsg, e error) {
-	e = GetDb().Where(fm).Take(&r).Error
+func (FwdMsg) GetFwd(fm *entities.FwdMsg) (err error) {
+	err = GetDb().Where(fm).Take(fm).Error
 	return
 }
 

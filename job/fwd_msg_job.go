@@ -2,6 +2,7 @@ package job
 
 import (
 	"context"
+	"errors"
 	"github.com/midnightsong/telegram-assistant/dao"
 	"github.com/midnightsong/telegram-assistant/utils"
 	"time"
@@ -13,7 +14,7 @@ func init() {
 	go func() {
 		for {
 			fwds, e := dao.FwdMsg{}.All()
-			if e != nil && e != gorm.ErrRecordNotFound {
+			if e != nil && !errors.Is(e, gorm.ErrRecordNotFound) {
 				utils.LogInfo(context.Background(), "查询转发的消息记录失败："+e.Error())
 				continue
 			}

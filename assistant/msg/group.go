@@ -8,6 +8,7 @@ import (
 	"github.com/midnightsong/telegram-assistant/dao"
 	"github.com/midnightsong/telegram-assistant/entities"
 	"github.com/midnightsong/telegram-assistant/gotgproto/ext"
+	"github.com/midnightsong/telegram-assistant/gotgproto/types"
 	"github.com/midnightsong/telegram-assistant/utils"
 	"regexp"
 	"strings"
@@ -16,12 +17,11 @@ import (
 )
 
 var oMatch = regexp.MustCompile(`\w{8,}`)
-var GroupRepeatMsg bool              //重复机器人消息
 var GroupRepeatMsgReplyTo bool       //关联回复重复过的机器人消息
 var GroupHideSourceRepeatBotMsg bool //当重复消息时，是否隐藏来源
 var fr = &dao.ForwardRelation{}
-var openedDialogs []*DialogsInfo
 var CacheRelationsMap = sync.Map{}
+var fwdMsgDao = dao.FwdMsg{}
 
 // Init 使用init函数初始化变量会导致App启动异常
 func Init() {
@@ -41,6 +41,34 @@ func Init() {
 	}
 }
 
+func getRelationsByPeer(peerID int64) (relations []*entities.ForwardRelation) {
+	value, ok := CacheRelationsMap.Load(peerID)
+	if !ok { //缓存中不存在，则从数据库查询
+		find, _ := fr.Find(peerID)
+		if len(find) == 0 {
+			AddLog("收到消息，未绑定转发关系")
+			empty := make([]*entities.ForwardRelation, 0)
+			CacheRelationsMap.Store(peerID, empty)
+			return nil
+		}
+		CacheRelationsMap.Store(peerID, find)
+		value = find
+	}
+	relations = value.([]*entities.ForwardRelation)
+	return
+}
+
+func saveForwardMsg(fromChatId, toChatId int64, fromMsgId, toMsgId int) {
+	go func() {
+		_ = fwdMsgDao.Insert(&entities.FwdMsg{
+			OriginChatID: fromChatId,
+			OriginMsgID:  fromMsgId,
+			TargetChatID: toChatId,
+			TargetMsgID:  toMsgId,
+		})
+	}()
+}
+
 func HandlerGroups(ctx *ext.Context, update *ext.Update) error {
 	if update.EffectiveMessage.IsService {
 		return nil
@@ -54,36 +82,48 @@ func HandlerGroups(ctx *ext.Context, update *ext.Update) error {
 		AddLog("读取到1分钟之前的消息，忽略")
 		return nil
 	}
-
+	//检查绑定关系
 	messageFromPeerId := update.EffectiveChat().GetID()
-	value, ok := CacheRelationsMap.Load(messageFromPeerId)
-	if !ok { //缓存中不存在，则从数据库查询
-		find, _ := fr.Find(messageFromPeerId)
-		if len(find) == 0 {
-			AddLog("收到消息，未绑定转发关系")
-			empty := make([]*entities.ForwardRelation, 0)
-			CacheRelationsMap.Store(messageFromPeerId, empty)
-			return nil
-		}
-		CacheRelationsMap.Store(messageFromPeerId, find)
-		value = find
-	}
-	relations := value.([]*entities.ForwardRelation)
+	relations := getRelationsByPeer(messageFromPeerId)
 	//可能绑定了多个需要转发的目标
 	for _, relation := range relations {
 		replyTo := update.EffectiveMessage.ReplyToMessage
 		//如果是回复类型的消息、打开了关联回复、是回复自己的消息
-		if replyTo != nil && relation.RelatedReply && ctx.Self.ID == replyTo.FromID.(*tg.PeerUser).UserID {
-			fmt.Println("查找数据库，找到从哪里转发过来的")
-			f := entities.FwdMsg{
+		if replyTo != nil && ctx.Self.ID == replyTo.FromID.(*tg.PeerUser).UserID {
+			f := &entities.FwdMsg{
 				TargetChatID: update.EffectiveChat().GetID(),
 				TargetMsgID:  replyTo.ID,
 			}
-			fwd, e := dao.FwdMsg{}.GetFwd(f)
+			e := dao.FwdMsg{}.GetFwd(f)
 			if e != nil {
-				fmt.Println("没找到消息，待测试")
+				AddLog("收到回复自己的消息，但未找到关联回复的原始消息，忽略")
+				continue
 			}
-			fmt.Println("继续后面的", fwd)
+			//检查目标会话是否打开了关联回复
+			originChatRelations := getRelationsByPeer(f.TargetChatID)
+			for _, originChatRelation := range originChatRelations {
+				if originChatRelation.ToPeerID != update.EffectiveChat().GetID() {
+					continue
+				}
+				//找到原本Chat的绑定配置，检查是否打开了关联回复
+				if originChatRelation.RelatedReply {
+					var msg *types.Message
+					var err error
+					if update.EffectiveMessage.Media != nil {
+						p := update.EffectiveMessage.Media.(*tg.MessageMediaPhoto)
+						msg, err = SendReplyMessageWhitPhoto(f.OriginChatID, f.OriginMsgID, p.Photo.GetID())
+					} else {
+						msg, err = SendReplyMessage(f.OriginChatID, f.OriginMsgID)
+					}
+
+					if err != nil {
+						AddLog("关联回复消息错误：" + err.Error())
+						utils.LogWarn(ctx.Context, "关联回复消息错误:"+err.Error())
+						continue
+					}
+					saveForwardMsg(messageFromPeerId, f.OriginChatID, update.EffectiveMessage.ID, msg.ID)
+				}
+			}
 			continue
 		}
 
@@ -91,7 +131,29 @@ func HandlerGroups(ctx *ext.Context, update *ext.Update) error {
 		if !relation.OnlyBot && !update.EffectiveUser().Bot {
 			continue
 		}
+		//只转发带图片的消息开关打开
+		if relation.MustMedia && update.EffectiveMessage.Media == nil {
+			continue
+		}
+		//满足文字条件
+		if oMatch.MatchString(update.EffectiveMessage.Text) {
+			//显示消息来源
+			if relation.ShowOrigin {
+				updatesClass, err := ForwardMessage(messageFromPeerId, relation.ToPeerID)
+				if err != nil {
+					AddLog("转发消息错误：" + err.Error())
+					utils.LogWarn(ctx.Context, "转发消息错误:"+err.Error())
+					continue
+				}
+				msgID := updatesClass.(*tg.Updates).Updates[0].(*tg.UpdateMessageID).ID
+				saveForwardMsg(messageFromPeerId, relation.ToPeerID, update.EffectiveMessage.ID, msgID)
+				continue
+			}
+			//隐藏消息来源（生成新的消息）
+			if update.EffectiveMessage.Media == nil {
 
+			}
+		}
 	}
 
 	/*//如果没有打开重复机器人消息的设置，则不进行后续处理
@@ -125,15 +187,15 @@ func groupRepeatMsgReplyToFunc(ctx *ext.Context, update *ext.Update) bool {
 					ChatID: update.EffectiveChat().GetID(),
 					MsgID:  replyTo.ID,
 				}
-				fwd, e := dao.FwdMsg{}.GetFwd(f)
-				go func() { AddLog(fmt.Sprint("回复原始消息", fwd.FwdMsgID)) }()
+				fwdMsgDao, e := dao.FwdMsg{}.GetFwd(f)
+				go func() { AddLog(fmt.Sprint("回复原始消息", fwdMsgDao.FwdMsgID)) }()
 				if e != nil {
 					//utils.LogInfo(ctx, "没有找到转发消息的原始id：可能已经删除")
 					AddLog(fmt.Sprint("没有找到转发消息的原始id：可能已经删除"))
 					return true
 				}
 				//查找自己转发消息的原始消息id
-				answer.Reply(fwd.FwdMsgID).Text(ctx, update.EffectiveMessage.Text)
+				answer.Reply(fwdMsgDao.FwdMsgID).Text(ctx, update.EffectiveMessage.Text)
 				return true*/
 			}
 			return true
