@@ -46,12 +46,12 @@ func groupSettingView(myApp fyne.App) *fyne.Container {
 	repeatBotMsg := widget.NewLabel("重复机器人的消息")
 	repeatBotMsgAlign := widget.NewRadioGroup([]string{"是", "否"}, func(s string) {
 		_ = config.Set("GroupRepeatMsg", strconv.FormatBool(s == "是"))
-		msg.GroupRepeatMsg = s == "是"
+		//msg.GroupRepeatMsg = s == "是"
 		repeatBotMsg.Refresh()
 	})
 	repeatBotMsgAlign.Horizontal = true
 	parseBool, _ := strconv.ParseBool(config.Get("GroupRepeatMsg"))
-	msg.GroupRepeatMsg = parseBool
+	//msg.GroupRepeatMsg = parseBool
 	if parseBool {
 		repeatBotMsgAlign.SetSelected("是")
 	} else {

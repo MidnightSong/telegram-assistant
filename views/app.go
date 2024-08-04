@@ -9,7 +9,7 @@ import (
 )
 
 func Run() {
-	myApp := app.NewWithID("com.song.assistant")
+	myApp := app.NewWithID("com.panda.assistant")
 	/*if desk, ok := myApp.(desktop.App); ok {
 		m := fyne.NewMenu("Telegram Bot",
 			fyne.NewMenuItem("显示", func() {

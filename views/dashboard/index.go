@@ -89,6 +89,7 @@ func MsgNewWindow(jumpInWindow fyne.Window, myApp fyne.App) {
 		myApp.Quit()
 		os.Exit(0)
 	})
+	msg.AddLog("当前缓存文件路径为：" + myApp.Storage().RootURI().String())
 }
 
 func refreshOpenedDialogs() []*msg.DialogsInfo {

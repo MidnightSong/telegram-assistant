@@ -39,24 +39,40 @@ func DeleteMessage(chatId int64, msgId int) error {
 	return err
 }
 
-func SendReplyMessage(chatId int64, msgId int) (*types.Message, error) {
-	request := &tg.MessagesSendMessageRequest{}
-	//request.SetSendAs(Client.Self.AsInputPeer())
-	request.SetReplyTo(&tg.InputReplyToMessage{
-		ReplyToMsgID: msgId,
-	})
+func SendMessageWithPhoto(chatId int64, photo tg.PhotoClass) (*types.Message, error) {
+	photoID := &tg.InputPhoto{
+		ID:            photo.GetID(),
+		AccessHash:    photo.(*tg.Photo).AccessHash,
+		FileReference: photo.(*tg.Photo).FileReference,
+	}
+	request := &tg.MessagesSendMediaRequest{}
+	request.Media = &tg.InputMediaPhoto{ID: photoID}
 	lock.Lock()
-	message, err := Client.CreateContext().SendMessage(chatId, request)
+	message, err := Client.CreateContext().SendMedia(chatId, request)
 	lock.Unlock()
 	return message, err
 }
 
-func SendReplyMessageWhitPhoto(chatId int64, msgId int, photoId int64) (*types.Message, error) {
-	photo := &tg.InputPhoto{
-		ID: photoId,
+func SendReplyMessage(chatId int64, msgId int, msg string) (*types.Message, error) {
+	ctx := Client.CreateContext()
+	request := &tg.MessagesSendMessageRequest{Message: msg}
+	request.SetReplyTo(&tg.InputReplyToMessage{
+		ReplyToMsgID: msgId,
+	})
+	lock.Lock()
+	message, err := ctx.SendMessage(chatId, request)
+	lock.Unlock()
+	return message, err
+}
+
+func SendReplyMessageWhitPhoto(chatId int64, msgId int, msg string, photo tg.PhotoClass) (*types.Message, error) {
+	photoID := &tg.InputPhoto{
+		ID:            photo.GetID(),
+		AccessHash:    photo.(*tg.Photo).AccessHash,
+		FileReference: photo.(*tg.Photo).FileReference,
 	}
-	request := &tg.MessagesSendMediaRequest{}
-	request.Media = &tg.InputMediaPhoto{ID: photo}
+	request := &tg.MessagesSendMediaRequest{Message: msg}
+	request.Media = &tg.InputMediaPhoto{ID: photoID}
 	request.SetReplyTo(&tg.InputReplyToMessage{
 		ReplyToMsgID: msgId,
 	})
@@ -66,9 +82,10 @@ func SendReplyMessageWhitPhoto(chatId int64, msgId int, photoId int64) (*types.M
 	return message, err
 }
 
-func ForwardMessage(fromChatId, toChatId int64) (tg.UpdatesClass, error) {
+func ForwardMessage(fromChatId, toChatId int64, msgIDs []int) (tg.UpdatesClass, error) {
 	ctx := Client.CreateContext()
 	request := &tg.MessagesForwardMessagesRequest{
+		ID:     msgIDs,
 		SendAs: ctx.Self.AsInputPeer(),
 	}
 	lock.Lock()

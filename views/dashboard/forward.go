@@ -14,11 +14,14 @@ import (
 	"github.com/midnightsong/telegram-assistant/gotgproto/storage"
 	"github.com/midnightsong/telegram-assistant/utils"
 	"github.com/midnightsong/telegram-assistant/views/icon"
+	"reflect"
 	"time"
+	"unsafe"
 )
 
 var fr = dao.ForwardRelation{}
 
+// TODO 退出群聊后，删除数据库绑定关系记录
 func getForwardView(window fyne.Window) *container.TabItem {
 	var frsCache []*entities.ForwardRelation
 	var unBindChatTitle = make([]string, 0)
@@ -35,18 +38,14 @@ func getForwardView(window fyne.Window) *container.TabItem {
 	topTitle := widget.NewRichTextFromMarkdown("## **消息转发**")
 	topTitle.Segments[0].(*widget.TextSegment).Style.Alignment = fyne.TextAlignCenter //标题居中
 	originText := widget.NewRichTextFromMarkdown("## 源会话")
-	//originText.Segments[0].(*widget.TextSegment).Style.Alignment = fyne.TextAlignLeading
 	targetText := widget.NewRichTextFromMarkdown("## 目标会话")
-	//targetText.Segments[0].(*widget.TextSegment).Style.Alignment = fyne.TextAlignTrailing
 	tmp := container.NewHBox(originText, layout.NewSpacer(), targetText)
 	topBox := container.NewVBox(topTitle, tmp)
 
 	listLen := func() int { return len(openedDialogs) }
 	createItem := func() fyne.CanvasObject {
 		title := widget.NewLabel("尚无已打开的会话")
-		//title.Alignment = fyne.TextAlignLeading
 		titleType := widget.NewLabel("未知会话类型")
-		//titleType.Alignment = fyne.TextAlignTrailing
 		return container.NewHBox(title, layout.NewSpacer(), titleType)
 	}
 	updateItem := func(i widget.ListItemID, o fyne.CanvasObject) {
@@ -93,24 +92,24 @@ func getForwardView(window fyne.Window) *container.TabItem {
 			onlyBot := widget.NewCheck("仅转发机器人的消息", func(b bool) {
 				if b != itemCopy.OnlyBot {
 					itemCopy.OnlyBot = b
-					fmt.Printf("点了一下：%s,下面的Id %d \n", info.Title, itemCopy.ID)
 					_ = fr.Add(itemCopy)
+					msg.CacheRelationsMap.Delete(itemCopy.PeerID) //删除处理接收消息处理模块的缓存
 				}
 			})
 			onlyBot.SetChecked(itemCopy.OnlyBot)
 			showOrigin := widget.NewCheck("显示消息来源", func(b bool) {
 				if b != itemCopy.ShowOrigin {
 					itemCopy.ShowOrigin = b
-					fmt.Printf("点了一下：%s,下面的 %s 显示消息来源开关\n", info.Title, dialogsMapById[itemCopy.ToPeerID].Title)
 					_ = fr.Add(itemCopy)
+					msg.CacheRelationsMap.Delete(itemCopy.PeerID) //删除处理接收消息处理模块的缓存
 				}
 			})
 			showOrigin.SetChecked(itemCopy.ShowOrigin)
-			relatedReply := widget.NewCheck("关联转发回复(当显示来源)", func(b bool) {
+			relatedReply := widget.NewCheck("关联回复原始消息", func(b bool) {
 				if b != itemCopy.RelatedReply {
 					itemCopy.RelatedReply = b
-					fmt.Printf("点了一下：%s,下面的 %s 关联转发回复开关\n", info.Title, dialogsMapById[itemCopy.ToPeerID].Title)
 					_ = fr.Add(itemCopy)
+					msg.CacheRelationsMap.Delete(itemCopy.PeerID) //删除处理接收消息处理模块的缓存
 				}
 			})
 			relatedReply.SetChecked(itemCopy.RelatedReply)
@@ -118,24 +117,30 @@ func getForwardView(window fyne.Window) *container.TabItem {
 			conditionLabel.Segments[0].(*widget.TextSegment).Style.Alignment = fyne.TextAlignTrailing //标题居右
 			regexLabel := widget.NewLabel("文字(正则表达式)")
 			regexEntry := widget.NewEntry()
-			regexEntry.OnChanged = func(s string) {
-				fmt.Printf("正则：%s\n", s)
+			v := reflect.ValueOf(regexEntry).Elem().FieldByName("onFocusChanged")
+			va := func(b bool) {
+				if regexEntry.Text != itemCopy.Regex {
+					itemCopy.Regex = regexEntry.Text
+					_ = fr.Add(itemCopy)
+					msg.CacheRelationsMap.Delete(itemCopy.PeerID) //删除处理接收消息处理模块的缓存
+				}
 			}
+			reflect.NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem().Set(reflect.ValueOf(va))
+
 			regex := container.New(layout.NewFormLayout(), regexLabel, regexEntry)
 			regexEntry.Text = itemCopy.Regex
 			regexEntry.PlaceHolder = "\\w{8,}"
 			mustMedia := widget.NewCheck("转发消息中必须带图片", func(b bool) {
 				if b != itemCopy.MustMedia {
 					itemCopy.MustMedia = b
-					fmt.Printf("点了一下：%s,下面的 %s 转发消息中必须带图片开关\n", info.Title, dialogsMapById[itemCopy.ToPeerID].Title)
 					_ = fr.Add(itemCopy)
+					msg.CacheRelationsMap.Delete(itemCopy.PeerID) //删除处理接收消息处理模块的缓存
 				}
 			})
 			mustMedia.SetChecked(itemCopy.MustMedia)
 			deleteBindButton := widget.NewButton("删除", func() {
 				dialog.ShowConfirm("确定？", "将删除该绑定对象", func(b bool) {
 					if b {
-						fmt.Printf("删除绑定对象：%d\n", itemCopy.ID)
 						fr.DeleteById(itemCopy.ID)
 						msg.CacheRelationsMap.Delete(itemCopy.PeerID) //删除处理接收消息处理模块的缓存
 						clickOrigin(listIndex)
