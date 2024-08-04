@@ -3,14 +3,12 @@ package msg
 import (
 	"errors"
 	"github.com/gotd/td/tg"
-	"github.com/midnightsong/telegram-assistant/gotgproto"
 	mtp_errors "github.com/midnightsong/telegram-assistant/gotgproto/errors"
 	"github.com/midnightsong/telegram-assistant/gotgproto/types"
 	"sync"
 	"time"
 )
 
-var Client *gotgproto.Client
 var lock sync.Mutex
 
 func SendMessage(chatId int64, msg string) (int, error) {

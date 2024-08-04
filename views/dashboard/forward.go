@@ -42,14 +42,14 @@ func getForwardView(window fyne.Window) *container.TabItem {
 	tmp := container.NewHBox(originText, layout.NewSpacer(), targetText)
 	topBox := container.NewVBox(topTitle, tmp)
 
-	listLen := func() int { return len(openedDialogs) }
+	listLen := func() int { return len(msg.OpenedDialogs) }
 	createItem := func() fyne.CanvasObject {
 		title := widget.NewLabel("尚无已打开的会话")
 		titleType := widget.NewLabel("未知会话类型")
 		return container.NewHBox(title, layout.NewSpacer(), titleType)
 	}
 	updateItem := func(i widget.ListItemID, o fyne.CanvasObject) {
-		item := openedDialogs[i]
+		item := msg.OpenedDialogs[i]
 		itemType := ""
 		if item.Bot {
 			itemType = "机器人"
@@ -58,14 +58,14 @@ func getForwardView(window fyne.Window) *container.TabItem {
 		} else {
 			itemType = "群组|频道"
 		}
-		o.(*fyne.Container).Objects[0].(*widget.Label).SetText(openedDialogs[i].Title)
+		o.(*fyne.Container).Objects[0].(*widget.Label).SetText(msg.OpenedDialogs[i].Title)
 		o.(*fyne.Container).Objects[2].(*widget.Label).SetText(fmt.Sprintf("【%s】", itemType))
 	}
 	originList := widget.NewList(listLen, createItem, updateItem) //会话来源的view（左侧）
 	clickOrigin = func(id widget.ListItemID) {
 		dialogsMapById = map[int64]*msg.DialogsInfo{}     //方便通过peerId找到对应的会话信息,每次点击左侧时更新
 		dialogsMapByTitle = map[string]*msg.DialogsInfo{} //方便通过会话名称找到对应的会话信息,每次点击左侧时更新
-		utils.Select(openedDialogs, func(p *msg.DialogsInfo, index int) error {
+		utils.Select(msg.OpenedDialogs, func(p *msg.DialogsInfo, index int) error {
 			dialogsMapById[p.PeerId] = p
 			dialogsMapByTitle[p.Title] = p
 			return nil
@@ -73,7 +73,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 		//更新索引
 		listIndex = id
 		//显示当前选中会话所有绑定的会话
-		info := openedDialogs[id]          //当前选中的会话
+		info := msg.OpenedDialogs[id]      //当前选中的会话
 		frsCache, _ = fr.Find(info.PeerId) //已存库的绑定关系表
 		//先清空绑定会话目标view
 		ac.Items = make([]*widget.AccordionItem, 0)
@@ -183,7 +183,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 		if listIndex == -1 || selectIndex == "" { //默认值，尚未更新
 			return
 		}
-		origin := openedDialogs[listIndex]       //源会话
+		origin := msg.OpenedDialogs[listIndex]   //源会话
 		target := dialogsMapByTitle[selectIndex] //绑定目标
 		bind := &entities.ForwardRelation{
 			PeerID:       origin.PeerId,

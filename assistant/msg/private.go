@@ -10,6 +10,7 @@ import (
 
 var PrivateRepeatMsg bool
 
+// Deprecated: HandlerPrivate
 func HandlerPrivate(ctx *ext.Context, update *ext.Update) error {
 	user := update.EffectiveUser()
 	AddLog(fmt.Sprintf(

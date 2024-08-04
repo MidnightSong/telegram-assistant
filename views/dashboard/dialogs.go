@@ -11,44 +11,23 @@ import (
 	"github.com/midnightsong/telegram-assistant/assistant/msg"
 	"github.com/midnightsong/telegram-assistant/gotgproto/storage"
 	"github.com/midnightsong/telegram-assistant/views/icon"
-	"time"
 )
-
-func getMsgView(window fyne.Window) *container.TabItem {
-	msgTab := container.NewAppTabs(
-		container.NewTabItem("处理日志", msgRtView()),
-		container.NewTabItem("已打开的会话", getOpenedDialogs(window)),
-	)
-	return container.NewTabItemWithIcon("", icon.GetIcon(icon.Telegram), msgTab)
-}
-
-func msgRtView() fyne.CanvasObject {
-	RtMsg := widget.NewMultiLineEntry()
-	RtMsg.Wrapping = fyne.TextWrapWord
-	go func() {
-		for {
-			log := <-msg.Log
-			RtMsg.Text += "\n" + log
-			if len(RtMsg.Text) > 6666 {
-				RtMsg.Text = RtMsg.Text[len(RtMsg.Text)-6666:]
-			}
-			RtMsg.Refresh()
-		}
-	}()
-	return RtMsg
-}
 
 // 已选中的会话
 var chatChecked map[int]*msg.DialogsInfo
 
-// openedDialogs 返回已打开的会话视图（表格）
+func getDialogsView(window fyne.Window) *container.TabItem {
+	return container.NewTabItemWithIcon("", icon.GetIcon(icon.LoudSpeaker), getOpenedDialogs(window))
+}
+
+// msg.OpenedDialogs 返回已打开的会话视图（表格）
 func getOpenedDialogs(window fyne.Window) fyne.CanvasObject {
 	chatChecked = map[int]*msg.DialogsInfo{}
 	var table *widget.Table
 	checks := map[int]*widget.Check{}
 	col := 3
 	//表格行列数量
-	tableLength := func() (int, int) { return len(openedDialogs), col }
+	tableLength := func() (int, int) { return len(msg.OpenedDialogs), col }
 	//初始化单元格
 	initCell := func() fyne.CanvasObject {
 		label := widget.NewLabel("")
@@ -77,7 +56,7 @@ func getOpenedDialogs(window fyne.Window) fyne.CanvasObject {
 						}
 						checks[i].Checked = b
 						checks[i].Refresh()
-						chatChecked[i] = openedDialogs[i]
+						chatChecked[i] = msg.OpenedDialogs[i]
 					}
 					return
 				}
@@ -111,19 +90,19 @@ func getOpenedDialogs(window fyne.Window) fyne.CanvasObject {
 			}
 			check.OnChanged = func(b bool) {
 				if b {
-					chatChecked[id.Row] = openedDialogs[id.Row]
+					chatChecked[id.Row] = msg.OpenedDialogs[id.Row]
 					return
 				}
 				delete(chatChecked, id.Row)
 			}
 			check.Show()
 		case 1:
-			c.Objects[0].(*widget.Label).SetText(openedDialogs[id.Row].Title)
+			c.Objects[0].(*widget.Label).SetText(msg.OpenedDialogs[id.Row].Title)
 			c.Objects[0].(*widget.Label).Show()
 		case 2:
 			c.Objects[0].(*widget.Label).Show()
-			if openedDialogs[id.Row].EntityType == storage.TypeUser {
-				if openedDialogs[id.Row].Bot {
+			if msg.OpenedDialogs[id.Row].EntityType == storage.TypeUser {
+				if msg.OpenedDialogs[id.Row].Bot {
 					c.Objects[0].(*widget.Label).SetText("机器人")
 					return
 				}
@@ -149,23 +128,16 @@ func getOpenedDialogs(window fyne.Window) fyne.CanvasObject {
 			table.SetRowHeight(index, 50)
 		}
 	}*/
-	//刷新已打开会话的按钮
-	var refresh *widget.Button
-	refresh = widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {
-		//清除当前checks除了标题栏
-		table.Refresh()
-		go func() {
-			refresh.Disable()
-			time.Sleep(time.Second * 5)
-			refresh.Enable()
-		}()
-	})
-	var loudSpeaker *widget.Button
-	loudSpeaker = widget.NewButtonWithIcon("", icon.GetIcon(icon.LoudSpeaker), func() {
+
+	var broadcast *widget.Button
+	broadcast = widget.NewButtonWithIcon("", icon.GetIcon(icon.Telegram), func() {
 		ShowSendMsgModal(window)
 	})
-	buttonsBox := container.NewHBox(loudSpeaker, layout.NewSpacer(), refresh)
-	return container.NewBorder(buttonsBox, nil, nil, nil, table)
+	broadcast.Importance = widget.HighImportance
+	broadcast.Resize(fyne.NewSize(60, 40))
+
+	buttonsBox := container.NewHBox(layout.NewSpacer(), broadcast)
+	return container.NewBorder(nil, buttonsBox, nil, nil, table)
 }
 
 func ShowSendMsgModal(window fyne.Window) {

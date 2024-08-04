@@ -27,6 +27,7 @@ func GetLogOutView(window fyne.Window) *container.TabItem {
 	testButton := widget.NewButton("test", func() {
 		ShowSendMsgModal(window)
 	})
+	testButton.Hide()
 	logOutBox := container.NewVBox(logOutButton, testButton)
 
 	return container.NewTabItemWithIcon("", icon.GetIcon(icon.ShutDown), logOutBox)
