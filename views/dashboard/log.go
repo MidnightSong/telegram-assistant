@@ -8,23 +8,43 @@ import (
 	"github.com/midnightsong/telegram-assistant/views/icon"
 )
 
-// TODO 清空日志信息
+var logEntry *widget.RichText
+
 func getLogView(window fyne.Window) *container.TabItem {
-	return container.NewTabItemWithIcon("", icon.GetIcon(icon.Log), msgRtView())
+	box := container.NewBorder(nil, clearLogButton(), nil, nil, logView())
+	return container.NewTabItemWithIcon("", icon.GetIcon(icon.Log), box)
 }
 
-func msgRtView() fyne.CanvasObject {
-	RtMsg := widget.NewMultiLineEntry()
-	RtMsg.Wrapping = fyne.TextWrapWord
+var title = `
+## 日志
+---
+`
+var logStr = ""
+
+func logView() fyne.CanvasObject {
+
+	logEntry = widget.NewRichTextFromMarkdown(title)
+	logEntry.Wrapping = fyne.TextWrapWord
+	logEntry.Scroll = container.ScrollBoth
 	go func() {
 		for {
 			log := <-msg.Log
-			RtMsg.Text += "\n" + log
-			if len(RtMsg.Text) > 6666 {
-				RtMsg.Text = RtMsg.Text[len(RtMsg.Text)-6666:]
+			logStr += "\n\n" + log
+			if len(logStr) > 6666 {
+				logStr = logStr[len(logStr)-6666:]
 			}
-			RtMsg.Refresh()
+			logEntry.ParseMarkdown(title + logStr)
+			logEntry.Refresh()
 		}
 	}()
-	return RtMsg
+	return logEntry
+}
+
+func clearLogButton() *widget.Button {
+	button := widget.NewButtonWithIcon("", icon.GetIcon(icon.Delete), func() {
+		logEntry.ParseMarkdown(title)
+		logEntry.Refresh()
+	})
+	button.Importance = widget.LowImportance
+	return button
 }

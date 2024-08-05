@@ -45,12 +45,13 @@ func ProcessMsg(ctx *ext.Context, update *ext.Update) error {
 		//满足文字条件
 		reg, err := getReg(relation.Regex)
 		if err != nil {
-			log := fmt.Sprintf("转发消息失败：\n%s:%s\n原因: %s", update.EffectiveUser().FirstName+update.EffectiveUser().LastName, update.EffectiveMessage.Text, err.Error())
+			log := fmt.Sprintf("转发消息失败：\n\n%s:%s\n\n原因: %s", update.EffectiveUser().FirstName+update.EffectiveUser().LastName, update.EffectiveMessage.Text, err.Error())
 			AddLog(log)
 			continue
 		}
 		if reg.MatchString(update.EffectiveMessage.Text) {
-
+			log := fmt.Sprintf("从【%s】转发消息到【%s】内容：\n\n%s", relation.PeerTitle, relation.ToPeerTitle, update.EffectiveMessage.Text)
+			AddLog(log)
 			//显示消息来源
 			if relation.ShowOrigin {
 				updatesClass, err := ForwardMessage(messageFromPeerId, relation.ToPeerID, []int{update.EffectiveMessage.ID})
@@ -98,7 +99,7 @@ func processReply(ctx *ext.Context, update *ext.Update) {
 		}
 		e := dao.FwdMsg{}.GetFwd(beforeForward)
 		if e != nil {
-			log := fmt.Sprintf("收到无原始消息回复:\n %s: %s\n", update.EffectiveUser().FirstName+update.EffectiveUser().LastName, update.EffectiveMessage.Text)
+			log := fmt.Sprintf("收到无原始消息回复:\n\n %s: %s", update.EffectiveUser().FirstName+update.EffectiveUser().LastName, update.EffectiveMessage.Text)
 			AddLog(log)
 			return
 		}

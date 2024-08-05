@@ -68,7 +68,7 @@ func MsgNewWindow(jumpInWindow fyne.Window, myApp fyne.App) {
 	)
 	leftTabs.SetTabLocation(container.TabLocationLeading)
 
-	dashboardWindow.Resize(fyne.NewSize(1024, 576))
+	dashboardWindow.Resize(fyne.NewSize(854, 480))
 	dashboardWindow.SetContent(leftTabs)
 	dashboardWindow.CenterOnScreen()
 	dashboardWindow.Show()

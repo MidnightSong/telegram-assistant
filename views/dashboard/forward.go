@@ -193,6 +193,8 @@ func getForwardView(window fyne.Window) *container.TabItem {
 			RelatedReply: true,
 			Regex:        "\\w{8,}",
 			MustMedia:    true,
+			PeerTitle:    origin.Title,
+			ToPeerTitle:  target.Title,
 		}
 		_ = fr.Add(bind)
 		selectUnBinding.ClearSelected()

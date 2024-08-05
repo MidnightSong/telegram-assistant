@@ -28,11 +28,12 @@ func Init() {
 	// 查出所有的绑定关系集合，然后通过源id进行分类后缓存
 	refreshCache := func() {
 		all := fr.All()
+		CacheRelationsMap = sync.Map{}
 		for _, d := range all {
 			key := d.PeerID
 			var relations []*entities.ForwardRelation
 			value, _ := CacheRelationsMap.Load(key)
-			if value != nil {
+			if value != nil { //TODO bug fix
 				relations = value.([]*entities.ForwardRelation)
 			} else {
 				relations = []*entities.ForwardRelation{}
@@ -52,22 +53,24 @@ func Init() {
 			OpenedDialogs = refreshOpenedDialogs()
 			//如果绑定关系中有记录，但已打开会话中没有
 			//说明该会话已被关闭，那么对应删除绑定关系
-			CacheRelationsMap.Range(func(k, v interface{}) bool {
-				flag := true
-				for _, dialog := range OpenedDialogs {
-					if dialog.PeerId == k {
-						flag = false
-						break
+			if len(OpenedDialogs) != 0 {
+				CacheRelationsMap.Range(func(k, v interface{}) bool {
+					flag := true
+					for _, dialog := range OpenedDialogs {
+						if dialog.PeerId == k {
+							flag = false
+							break
+						}
 					}
-				}
-				if flag {
-					CacheRelationsMap.Delete(k)
-					fr.Delete(k.(int64))
-					CacheRelationsMap.Delete(k)
-				}
-				return true
-			})
-			time.Sleep(10 * time.Second)
+					if flag {
+						CacheRelationsMap.Delete(k)
+						fr.Delete(k.(int64))
+						CacheRelationsMap.Delete(k)
+					}
+					return true
+				})
+			}
+			time.Sleep(30 * time.Second)
 		}
 	}()
 }

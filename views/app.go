@@ -10,6 +10,7 @@ import (
 
 func Run() {
 	myApp := app.NewWithID("com.panda.assistant")
+	//myApp.Settings().SetTheme(custom.Theme{})
 	/*if desk, ok := myApp.(desktop.App); ok {
 		m := fyne.NewMenu("Telegram Bot",
 			fyne.NewMenuItem("显示", func() {
