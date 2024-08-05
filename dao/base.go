@@ -34,7 +34,7 @@ func GetDb() *gorm.DB {
 		if err != nil {
 			utils.LogError(context.TODO(), err.Error())
 		}
-		_db = _db.Debug()
+		//_db = _db.Debug()
 	})
 	return _db
 }
