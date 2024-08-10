@@ -71,20 +71,20 @@ func getOpenedDialogs(window fyne.Window) fyne.CanvasObject {
 			}
 		case 1:
 			c.Objects[0].(*widget.Label).SetText("标题")
-			c.Objects[0].(*widget.Label).Show()
 		case 2:
 			c.Objects[0].(*widget.Label).SetText("类型")
-			c.Objects[0].(*widget.Label).Show()
+			//c.Objects[0].(*widget.Label).Show()
 		}
 		return
 	}
 	//单元格更新
 	updateCell := func(id widget.TableCellID, cell fyne.CanvasObject) {
 		c := cell.(*fyne.Container)
+		label := c.Objects[0].(*widget.Label)
+		check := c.Objects[1].(*widget.Check)
 		switch id.Col {
 		case 0:
-			c.Objects[0].(*widget.Label).Hide()
-			check := c.Objects[1].(*widget.Check)
+			label.Hide()
 			if checks[id.Row] == nil {
 				checks[id.Row] = check
 			}
@@ -97,19 +97,21 @@ func getOpenedDialogs(window fyne.Window) fyne.CanvasObject {
 			}
 			check.Show()
 		case 1:
-			c.Objects[0].(*widget.Label).SetText(msg.OpenedDialogs[id.Row].Title)
-			c.Objects[0].(*widget.Label).Show()
+			label.SetText(msg.OpenedDialogs[id.Row].Title)
+			label.Show()
+			check.Hide()
 		case 2:
-			c.Objects[0].(*widget.Label).Show()
+			label.Show()
+			check.Hide()
 			if msg.OpenedDialogs[id.Row].EntityType == storage.TypeUser {
 				if msg.OpenedDialogs[id.Row].Bot {
-					c.Objects[0].(*widget.Label).SetText("机器人")
+					label.SetText("机器人")
 					return
 				}
-				c.Objects[0].(*widget.Label).SetText("用户")
+				label.SetText("用户")
 				return
 			}
-			c.Objects[0].(*widget.Label).SetText("群组/频道")
+			label.SetText("群组/频道")
 		}
 	}
 

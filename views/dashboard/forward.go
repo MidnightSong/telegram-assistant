@@ -1,7 +1,6 @@
 package dashboard
 
 import (
-	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
@@ -21,7 +20,6 @@ import (
 
 var fr = dao.ForwardRelation{}
 
-// TODO 退出群聊后，删除数据库绑定关系记录
 func getForwardView(window fyne.Window) *container.TabItem {
 	var frsCache []*entities.ForwardRelation
 	var unBindChatTitle = make([]string, 0)
@@ -45,21 +43,22 @@ func getForwardView(window fyne.Window) *container.TabItem {
 	listLen := func() int { return len(msg.OpenedDialogs) }
 	createItem := func() fyne.CanvasObject {
 		title := widget.NewLabel("尚无已打开的会话")
-		titleType := widget.NewLabel("未知会话类型")
-		return container.NewHBox(title, layout.NewSpacer(), titleType)
+		title.Truncation = fyne.TextTruncateClip
+		titleType := widget.NewIcon(theme.AccountIcon())
+		return container.NewHBox(titleType, title)
 	}
 	updateItem := func(i widget.ListItemID, o fyne.CanvasObject) {
 		item := msg.OpenedDialogs[i]
-		itemType := ""
+		var itemType *widget.Icon
 		if item.Bot {
-			itemType = "机器人"
+			itemType = widget.NewIcon(icon.GetIcon(icon.Bot))
 		} else if item.EntityType == storage.TypeUser {
-			itemType = "用户"
+			itemType = widget.NewIcon(icon.GetIcon(icon.People))
 		} else {
-			itemType = "群组|频道"
+			itemType = widget.NewIcon(icon.GetIcon(icon.Group))
 		}
-		o.(*fyne.Container).Objects[0].(*widget.Label).SetText(msg.OpenedDialogs[i].Title)
-		o.(*fyne.Container).Objects[2].(*widget.Label).SetText(fmt.Sprintf("【%s】", itemType))
+		o.(*fyne.Container).Objects[1].(*widget.Label).SetText(msg.OpenedDialogs[i].Title)
+		o.(*fyne.Container).Objects[0] = itemType
 	}
 	originList := widget.NewList(listLen, createItem, updateItem) //会话来源的view（左侧）
 	clickOrigin = func(id widget.ListItemID) {

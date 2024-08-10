@@ -1,4 +1,4 @@
-package utils
+package assistant
 
 import (
 	"encoding/base64"
@@ -6,21 +6,59 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
+	"github.com/midnightsong/telegram-assistant/dao"
+	"github.com/midnightsong/telegram-assistant/utils"
 	"github.com/pkg/errors"
 	"golang.org/x/net/proxy"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
+	"time"
 )
 
-type httpClient struct{}
-
-var HttpClient httpClient
 var restyCli = resty.New()
 var key, _ = hex.DecodeString("57227176a09c27191875e85ce2ccea571e415fd98038ccb21e892c4d7182bc3e")
 var iv, _ = hex.DecodeString("ff5097cd1d355f6d6f8d9225")
+var config = dao.Config{}
 
-func (cli *httpClient) SetSocks5(b bool, address string, port string) error {
+type AuthResponse struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Data struct {
+		UUID      string `json:"uuid"`
+		Exp       int    `json:"exp"`
+		Duration  int    `json:"duration"`
+		Timestamp int    `json:"timestamp"`
+	} `json:"data"`
+}
+
+func Auth() (*AuthResponse, error) {
+	name, err := os.Hostname()
+	if err != nil {
+		return nil, errors.New("获取设备信息失败，请联系客服处理" + err.Error())
+	}
+	params := make(map[string]interface{})
+	params["device_id"] = name
+	params["uuid"] = config.Get("authCode")
+	params["timestamp"] = time.Now().Unix()
+	result := &AuthResponse{}
+	if config.Get("socksOpen") == "true" {
+		err = setSocks5(true, config.Get("socksAddr"), config.Get("socksPort"))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		_ = setSocks5(false, "", "")
+	}
+	err = post("https://auth.seven-d76.workers.dev/acv", params, result)
+	if err != nil {
+		return nil, errors.New("获取设备信息失败，请联系客服处理" + err.Error())
+	}
+	return result, nil
+}
+
+func setSocks5(b bool, address string, port string) error {
 	if b {
 		proxyURL, _ := url.Parse(fmt.Sprintf("socks5://%s:%s", address, port))
 		dialer, err := proxy.FromURL(proxyURL, proxy.Direct)
@@ -35,7 +73,7 @@ func (cli *httpClient) SetSocks5(b bool, address string, port string) error {
 	return nil
 }
 
-func (cli *httpClient) Post(toUrl string, params map[string]interface{}, result any) error {
+func post(toUrl string, params map[string]interface{}, result any) error {
 	restyCli.Debug = true
 
 	request := restyCli.R()
@@ -45,7 +83,7 @@ func (cli *httpClient) Post(toUrl string, params map[string]interface{}, result 
 		return err
 	}
 	//LogInfo(context.Background(), "序列化："+string(jsonStr))
-	encrypt, err := AesGcmEncrypt(jsonStr, key, iv)
+	encrypt, err := utils.AesGcmEncrypt(jsonStr, key, iv)
 	if err != nil {
 		return errors.New("EncError")
 	}
@@ -63,7 +101,7 @@ func (cli *httpClient) Post(toUrl string, params map[string]interface{}, result 
 	if err != nil {
 		return errors.New("DecError")
 	}
-	plaintext, err := AesGcmDecrypt(decodeBytes, key, iv)
+	plaintext, err := utils.AesGcmDecrypt(decodeBytes, key, iv)
 	if err != nil {
 		return errors.New("DecError")
 	}

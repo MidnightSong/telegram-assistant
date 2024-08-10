@@ -8,10 +8,8 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/midnightsong/telegram-assistant/assistant"
 	"github.com/midnightsong/telegram-assistant/dao"
-	"github.com/midnightsong/telegram-assistant/utils"
 	"github.com/midnightsong/telegram-assistant/views/dashboard"
 	"github.com/midnightsong/telegram-assistant/views/setting"
-	"os"
 	"time"
 )
 
@@ -79,17 +77,6 @@ func showSettingWindow(app fyne.App) fyne.Window {
 	return settingWindow
 }
 
-type AuthResponse struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg"`
-	Data struct {
-		UUID      string `json:"uuid"`
-		Exp       int    `json:"exp"`
-		Duration  int    `json:"duration"`
-		Timestamp int    `json:"timestamp"`
-	} `json:"data"`
-}
-
 func waitingInput(app fyne.App) {
 	//输入激活码的窗口
 	inputted := make(chan bool)
@@ -117,34 +104,9 @@ func checkAut(window fyne.Window, app fyne.App) {
 	if authCode == "" || appId == "" || apiHash == "" {
 		waitingInput(app)
 	}
-	name, err := os.Hostname()
+	result, err := assistant.Auth()
 	if err != nil {
-		errorDialog := dialog.NewError(errors.New("获取设备信息失败，请联系客服处理"+err.Error()), window)
-		errorDialog.Show()
-		errorDialog.SetOnClosed(func() {
-			os.Exit(0)
-		})
-		return
-	}
-	params := make(map[string]interface{})
-	params["device_id"] = name
-	params["uuid"] = config.Get("authCode")
-	params["timestamp"] = time.Now().Unix()
-	result := &AuthResponse{}
-	if config.Get("socksOpen") == "true" {
-		err = utils.HttpClient.SetSocks5(true, config.Get("socksAddr"), config.Get("socksPort"))
-		if err != nil {
-			dialog.NewError(err, window).Show()
-			pass <- false
-			return
-		}
-	} else {
-		_ = utils.HttpClient.SetSocks5(false, "", "")
-	}
-
-	err = utils.HttpClient.Post("https://auth.seven-d76.workers.dev/acv", params, result)
-	if err != nil {
-		errorDialog := dialog.NewError(errors.New("内部错误：\n"+err.Error()), window)
+		errorDialog := dialog.NewError(err, window)
 		errorDialog.Show()
 		errorDialog.SetOnClosed(func() {
 			waitingInput(app)
