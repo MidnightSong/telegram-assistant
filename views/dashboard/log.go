@@ -15,6 +15,8 @@ var title = `
 ## 日志
 ---
 `
+var logStr string
+var logBox fyne.CanvasObject
 
 func getLogView(window fyne.Window) *container.TabItem {
 	bottomBox := container.NewHBox(clearLogButton(), layout.NewSpacer(), switchLog())
@@ -25,26 +27,27 @@ func getLogView(window fyne.Window) *container.TabItem {
 func logView() fyne.CanvasObject {
 	logEntry = widget.NewRichTextFromMarkdown(title)
 	logEntry.Wrapping = fyne.TextWrapWord
-	logEntry.Scroll = container.ScrollBoth
 	go func() {
 		for {
 			log := <-msg.Log
-			logEntry.AppendMarkdown(log)
-			s := logEntry.String()
-			if len(s) > 6666 {
-				s = s[len(s)-6666:]
-				logEntry.ParseMarkdown(s)
+			logStr += log
+			if len(logStr) > 66666 {
+				logStr = logStr[len(logStr)-66666:]
 			}
+			logEntry.ParseMarkdown(title + logStr)
+			logBox.(*container.Scroll).ScrollToBottom()
 			logEntry.Refresh()
 		}
 	}()
-	return logEntry
+	logBox = container.NewVScroll(logEntry)
+	return logBox
 }
 
 func clearLogButton() *widget.Button {
 	button := widget.NewButtonWithIcon("", icon.GetIcon(icon.Delete), func() {
 		logEntry.ParseMarkdown(title)
 		logEntry.Refresh()
+		logStr = ""
 	})
 	button.Importance = widget.LowImportance
 	return button
