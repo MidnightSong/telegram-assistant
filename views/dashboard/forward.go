@@ -26,13 +26,13 @@ func getForwardView(window fyne.Window) *container.TabItem {
 	var dialogsMapById = map[int64]*msg.DialogsInfo{}     //方便通过peerId找到对应的会话信息,每次点击左侧时更新
 	var dialogsMapByTitle = map[string]*msg.DialogsInfo{} //方便通过title找到对应的会话信息,每次点击左侧时更新
 	var listIndex = -1                                    //选中会话来源view某行的索引
-	var ac *widget.Accordion                              //绑定会话关系的树形view（右侧）
 	var selectUnBinding *widget.Select                    //选中会话尚未绑定会话的select（右侧）
 	var rightBox *fyne.Container                          //右侧view的整体布局
 	var addBindButton *widget.Button                      //添加绑定按钮（右侧）
 	var selectIndex string                                //选中的绑定对象的索引（右侧）
 	var clickOrigin func(id int)
-
+	var bottomBox *fyne.Container
+	var splitBox *container.Split
 	topTitle := widget.NewRichTextFromMarkdown("## **消息转发**")
 	topTitle.Segments[0].(*widget.TextSegment).Style.Alignment = fyne.TextAlignCenter //标题居中
 	originText := widget.NewRichTextFromMarkdown("## 源会话")
@@ -75,7 +75,8 @@ func getForwardView(window fyne.Window) *container.TabItem {
 		info := msg.OpenedDialogs[id]      //当前选中的会话
 		frsCache, _ = fr.Find(info.PeerId) //已存库的绑定关系表
 		//先清空绑定会话目标view
-		ac.Items = make([]*widget.AccordionItem, 0)
+		//ac.Items = make([]*widget.AccordionItem, 0)
+		rightBox.RemoveAll()
 		time.Sleep(time.Millisecond * 15)
 		//展示绑定会话
 		for _, item := range frsCache {
@@ -114,7 +115,7 @@ func getForwardView(window fyne.Window) *container.TabItem {
 			relatedReply.SetChecked(itemCopy.RelatedReply)
 			conditionLabel := widget.NewRichTextFromMarkdown("## 触发条件")
 			conditionLabel.Segments[0].(*widget.TextSegment).Style.Alignment = fyne.TextAlignTrailing //标题居右
-			regexLabel := widget.NewLabel("文字(正则表达式)")
+			regexLabel := widget.NewLabel("文字(正则)")
 			regexEntry := widget.NewEntry()
 			v := reflect.ValueOf(regexEntry).Elem().FieldByName("onFocusChanged")
 			va := func(b bool) {
@@ -129,31 +130,43 @@ func getForwardView(window fyne.Window) *container.TabItem {
 			regex := container.New(layout.NewFormLayout(), regexLabel, regexEntry)
 			regexEntry.Text = itemCopy.Regex
 			regexEntry.PlaceHolder = "\\w{8,}"
-			mustMedia := widget.NewCheck("转发消息中必须带图片", func(b bool) {
+			mustMedia := widget.NewCheck("转发消息需含图片", func(b bool) {
 				if b != itemCopy.MustMedia {
 					itemCopy.MustMedia = b
 					_ = fr.Add(itemCopy)
 					msg.CacheRelationsMap.Delete(itemCopy.PeerID) //删除处理接收消息处理模块的缓存
 				}
 			})
+
 			mustMedia.SetChecked(itemCopy.MustMedia)
+			//模态框内容
+			var modal *widget.PopUp
 			deleteBindButton := widget.NewButton("删除", func() {
 				dialog.ShowConfirm("确定？", "将删除该绑定对象", func(b bool) {
 					if b {
 						fr.DeleteById(itemCopy.ID)
 						msg.CacheRelationsMap.Delete(itemCopy.PeerID) //删除处理接收消息处理模块的缓存
+						modal.Hide()
 						clickOrigin(listIndex)
 					}
 				}, window)
 			})
 			deleteBindButton.Importance = widget.WarningImportance
 			deleteBox := container.NewHBox(layout.NewSpacer(), deleteBindButton)
-			inTreeBox := container.NewAdaptiveGrid(2,
+			closeModalButton := widget.NewButtonWithIcon("", theme.CancelIcon(), func() {
+				modal.Hide()
+			})
+			closeModalButton.Importance = widget.LowImportance
+			modalTop := container.NewHBox(widget.NewLabel("转发配置"), layout.NewSpacer(), closeModalButton)
+			centerBox := container.NewAdaptiveGrid(2,
 				onlyBot, showOrigin, relatedReply, layout.NewSpacer(),
 				conditionLabel, layout.NewSpacer(), regex, mustMedia, deleteBox)
-
+			modal = widget.NewModalPopUp(container.NewBorder(modalTop, nil, nil, nil, centerBox), window.Canvas())
+			boundButton := widget.NewButton(to.Title, func() {
+				modal.Show()
+			})
 			//追加到绑定会话列表下
-			ac.Append(widget.NewAccordionItem(to.Title, inTreeBox))
+			rightBox.Add(boundButton)
 		}
 		//缓存当前会话尚未绑定的会话
 		unBindChatTitle = make([]string, 0)
@@ -171,12 +184,10 @@ func getForwardView(window fyne.Window) *container.TabItem {
 			}
 		}
 		selectUnBinding.Options = unBindChatTitle
-		ac.CloseAll()
-		//ac.Items[0].Detail.(*fyne.Container).Objects[0].(*widget.Check).Checked = true
-		rightBox.Show()
+		rightBox.Add(bottomBox)
+		rightBox.Refresh()
 	}
 	originList.OnSelected = clickOrigin
-	ac = widget.NewAccordion()
 	//在绑定会话列表的最后一行增加添加绑定关系的按钮
 	addBindButton = widget.NewButtonWithIcon("", theme.ContentAddIcon(), func() {
 		if listIndex == -1 || selectIndex == "" { //默认值，尚未更新
@@ -205,11 +216,10 @@ func getForwardView(window fyne.Window) *container.TabItem {
 		selectIndex = s
 	})
 	selectUnBinding.PlaceHolder = "--- 添加绑定 ---"
-	bottomBox := container.NewBorder(nil, nil, nil, addBindButton, selectUnBinding)
-	rightBox = container.NewVBox(ac, bottomBox)
-	rightBox.Hide()
-	splitBox := container.NewHSplit(originList, rightBox)
-	splitBox.Offset = 0.3
+	bottomBox = container.NewBorder(nil, nil, nil, addBindButton, selectUnBinding)
+	rightBox = container.NewVBox(bottomBox)
+	splitBox = container.NewHSplit(originList, rightBox)
+	splitBox.Offset = 0.5
 	border := container.NewBorder(topBox, nil, nil, nil, splitBox)
 	return container.NewTabItemWithIcon("", icon.GetIcon(icon.Forward), border)
 }

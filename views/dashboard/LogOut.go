@@ -5,6 +5,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
+	"github.com/midnightsong/telegram-assistant/assistant/msg"
 	"github.com/midnightsong/telegram-assistant/dao"
 	"github.com/midnightsong/telegram-assistant/views/icon"
 )
@@ -25,7 +26,8 @@ func GetLogOutView(window fyne.Window) *container.TabItem {
 	})
 	logOutButton.Importance = widget.DangerImportance
 	testButton := widget.NewButton("test", func() {
-		ShowSendMsgModal(window)
+		//ShowSendMsgModal(window)
+		msg.Refresh2()
 	})
 	testButton.Hide()
 	logOutBox := container.NewVBox(logOutButton, testButton)

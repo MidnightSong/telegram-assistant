@@ -9,6 +9,7 @@ import (
 	"github.com/midnightsong/telegram-assistant/gotgproto"
 	"github.com/midnightsong/telegram-assistant/gotgproto/storage"
 	"github.com/midnightsong/telegram-assistant/utils"
+	"go.uber.org/zap"
 	"reflect"
 	"regexp"
 	"sync"
@@ -82,6 +83,7 @@ func refreshOpenedDialogs() []*DialogsInfo {
 		}
 	}()
 	d, e := Client.API().MessagesGetDialogs(context.Background(), &tg.MessagesGetDialogsRequest{
+		Limit:      99,
 		OffsetPeer: &tg.InputPeerEmpty{}})
 	if e != nil {
 		AddLog("更新已打开的会话列表失败：" + e.Error())
@@ -114,6 +116,9 @@ func refreshOpenedDialogs() []*DialogsInfo {
 		case *tg.PeerChat:
 			for _, chat := range allChats {
 				if c, ok := chat.(*tg.Chat); ok {
+					if c.MigratedTo != nil { //如果是合并的群组则跳过
+						break
+					}
 					if c.ID == peer.ChatID {
 						info := &DialogsInfo{
 							Title:      c.Title,
@@ -142,6 +147,18 @@ func refreshOpenedDialogs() []*DialogsInfo {
 		}
 	}
 	return dialogsInfos
+}
+
+func Refresh2() {
+	ctx := Client.CreateContext()
+	views, err := ctx.Raw.MessagesGetMessagesViews(ctx.Context, &tg.MessagesGetMessagesViewsRequest{
+		//Peer:      &tg.InputPeerSelf{},
+		Increment: true,
+	})
+	if err != nil {
+		utils.LogError(ctx.Context, err.Error())
+	}
+	utils.LogInfo(ctx.Context, "123", zap.Any("views", views))
 }
 
 func getRelationsByPeer(peerID int64) (relations []*entities.ForwardRelation) {

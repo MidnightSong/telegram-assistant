@@ -82,7 +82,7 @@ async function validActiveCode(request, env, ctx) {
         }
         const data = JSON.parse(val);
         //第一次激活
-        if (data.device_id === null) {
+        if (data.device_id === undefined || data.device_id === null || data.device_id === ''){
             data.device_id = param.device_id
             await env.used_key.put(param.uuid, JSON.stringify(data));
             resp.code = 2000;

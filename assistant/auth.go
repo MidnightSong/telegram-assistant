@@ -10,9 +10,9 @@ import (
 	"github.com/midnightsong/telegram-assistant/utils"
 	"github.com/pkg/errors"
 	"golang.org/x/net/proxy"
+	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"time"
 )
@@ -34,7 +34,7 @@ type AuthResponse struct {
 }
 
 func Auth() (*AuthResponse, error) {
-	name, err := os.Hostname()
+	name, err := getMACAddress()
 	if err != nil {
 		return nil, errors.New("获取设备信息失败，请联系客服处理" + err.Error())
 	}
@@ -110,4 +110,17 @@ func post(toUrl string, params map[string]interface{}, result any) error {
 		return errors.New("json Unmarshal err:" + err.Error())
 	}
 	return nil
+}
+func getMACAddress() (string, error) {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return "", err
+	}
+
+	for _, inter := range interfaces {
+		if inter.Flags&net.FlagUp != 0 && len(inter.HardwareAddr) > 0 {
+			return inter.HardwareAddr.String(), nil
+		}
+	}
+	return "", fmt.Errorf("no valid MAC address found")
 }

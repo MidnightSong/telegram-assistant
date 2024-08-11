@@ -5,6 +5,7 @@ import (
 	"github.com/midnightsong/telegram-assistant/assistant/msg"
 	"github.com/midnightsong/telegram-assistant/dao"
 	"github.com/midnightsong/telegram-assistant/entities"
+	"github.com/midnightsong/telegram-assistant/job"
 	"github.com/midnightsong/telegram-assistant/views/auth"
 )
 
@@ -20,7 +21,6 @@ func Run() {
 	}*/
 	s := myApp.Storage()
 	path := s.RootURI().String()
-
 	/*	create, err := s.Create("../cache.db")
 		if err == nil {
 			create.Close()
@@ -36,5 +36,6 @@ func Run() {
 	go func() {
 		msg.Init()
 	}()
+	job.Init()
 	myApp.Run()
 }

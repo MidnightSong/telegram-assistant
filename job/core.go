@@ -12,12 +12,14 @@ import (
 	"time"
 )
 
-func init() {
+// Init 直接调用init函数会导致fyne配置读取出现问题
+func Init() {
 	go cleanFwd()
 	go checkAuth()
 }
 func checkAuth() {
 	for {
+		utils.LogInfo(context.Background(), "验证激活状态")
 		time.Sleep(time.Hour)
 		var err error
 		var result *assistant.AuthResponse
