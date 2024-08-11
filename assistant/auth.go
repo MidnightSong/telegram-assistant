@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"fyne.io/fyne/v2"
 	"github.com/go-resty/resty/v2"
 	"github.com/midnightsong/telegram-assistant/dao"
 	"github.com/midnightsong/telegram-assistant/utils"
@@ -34,24 +35,35 @@ type AuthResponse struct {
 }
 
 func Auth() (*AuthResponse, error) {
-	name, err := getMACAddress()
-	if err != nil {
-		return nil, errors.New("获取设备信息失败，请联系客服处理" + err.Error())
+	var uid string
+	if fyne.CurrentDevice().IsMobile() {
+		id, err := utils.GetAndroidID()
+		if err != nil {
+			return nil, errors.New("获取Android设备信息失败，请联系客服处理" + err.Error())
+		}
+		uid = id
+	} else {
+		address, err := getMACAddress()
+		if err != nil {
+			return nil, errors.New("获取设备信息失败，请联系客服处理" + err.Error())
+		}
+		uid = address
 	}
+
 	params := make(map[string]interface{})
-	params["device_id"] = name
+	params["device_id"] = uid
 	params["uuid"] = config.Get("authCode")
 	params["timestamp"] = time.Now().Unix()
 	result := &AuthResponse{}
 	if config.Get("socksOpen") == "true" {
-		err = setSocks5(true, config.Get("socksAddr"), config.Get("socksPort"))
+		err := setSocks5(true, config.Get("socksAddr"), config.Get("socksPort"))
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		_ = setSocks5(false, "", "")
 	}
-	err = post("https://auth.seven-d76.workers.dev/acv", params, result)
+	err := post("https://auth.seven-d76.workers.dev/acv", params, result)
 	if err != nil {
 		return nil, errors.New("获取设备信息失败，请联系客服处理" + err.Error())
 	}
