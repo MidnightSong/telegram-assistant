@@ -1,6 +1,9 @@
 package views
 
 import (
+	"runtime"
+	"strings"
+
 	"fyne.io/fyne/v2/app"
 	"github.com/midnightsong/telegram-assistant/assistant/msg"
 	"github.com/midnightsong/telegram-assistant/dao"
@@ -25,8 +28,11 @@ func Run() {
 		if err == nil {
 			create.Close()
 		}*/
-
+	if runtime.GOOS == "windows" {
+		path = strings.ReplaceAll(path, "file://", "")
+	}
 	dao.DbPath = path + "/cache.db"
+
 	_, err := dao.Sessions{}.GetSession(entities.Sessions{Version: 1})
 	if err != nil {
 		auth.LoginWindow(myApp)

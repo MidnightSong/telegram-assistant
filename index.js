@@ -126,11 +126,93 @@ var src_default = {
                 let resp = await validActiveCode(request, env, ctx);
                 const data = await encryptAES_GCM(key, JSON.stringify(resp), iv);
                 return new Response(bytesToBase64(data.ciphertext));
+            default :
+                return new Response(htmlContent, {
+                    headers: {
+                        'Content-Type': 'text/html'
+                    }
+                });
         }
-        return Response.json({Code: 5000});
     }
 };
 export {
     src_default as default
 };
-//# sourceMappingURL=index.js.map
+const htmlContent = `
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dancing Robot</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f7;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1d1d1f;
+        }
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            color: #6e6e73;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        img:hover {
+            transform: scale(1.05);
+        }
+        .button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            color: #fff;
+            background-color: #007aff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.3s ease;
+        }
+        .button:hover {
+            background-color: #005bb5;
+        }
+        .button img {
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>个人号机器人租用</h1>
+    <p>消息群发、转发等</p>
+    <p>解决官方机器人无法互相识别消息</p>
+    <img src="https://media.giphy.com/media/26xBwdIuRJiAIqHwA/giphy.gif" alt="Dancing Robot">
+    <a href="https://t.me/ZuLinpWuYu" class="button">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Telegram Icon">
+        在Telegram上联系我
+    </a>
+</body>
+</html>
+`;

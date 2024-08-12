@@ -1,0 +1,8 @@
+Website = "https://auth.seven-d76.workers.dev/"
+
+[Details]
+Icon = "icon.png"
+Name = "Telegram-Assistant"
+ID = "com.panda.assistant"
+Version = "1.0.0"
+Build = 1

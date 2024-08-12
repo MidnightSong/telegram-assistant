@@ -12,6 +12,7 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/midnightsong/telegram-assistant/dao"
+	"github.com/midnightsong/telegram-assistant/utils"
 	"strconv"
 )
 
@@ -130,20 +131,21 @@ func GetSettingView(window fyne.Window) *fyne.Container {
 				config.Set("socksAddr", sIP)
 				config.Set("socksPort", sPort)
 			}
-			dialog.ShowInformation("成功", "保存配置成功,配置将在重启客户端后生效", window)
-			//codeE.FocusLost() //显示输入框后面的感叹号
-			//e := codeE.Validate()
-			//if e != nil {
-			//	time.Sleep(time.Second * 2)
-			//	codeE.FocusGained()
-			//	return
-			//}
+			dialog.ShowInformation("成功", "保存配置成功", window)
 		},
 	}
-	//取消和确认按钮
-	cancelAndConfirmButton := container.NewHBox(
+	//保存按钮
+	saveButtonBox := container.NewHBox(
 		layout.NewSpacer(), confirmButton, layout.NewSpacer())
-	return container.New(layout.NewVBoxLayout(), configContainer, cancelAndConfirmButton)
+	testButton := widget.NewButton("测试", func() {
+		identifier, err := utils.GetDeviceIdentifier()
+		if err != nil {
+			dialog.NewError(err, window).Show()
+			return
+		}
+		dialog.ShowInformation("id", identifier, window)
+	})
+	return container.New(layout.NewVBoxLayout(), configContainer, saveButtonBox, testButton)
 }
 
 type appIDEntry struct {

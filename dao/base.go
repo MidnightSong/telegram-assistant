@@ -2,9 +2,10 @@ package dao
 
 import (
 	"context"
+	"sync"
+
 	"github.com/midnightsong/telegram-assistant/entities"
 	"github.com/midnightsong/telegram-assistant/utils"
-	"sync"
 
 	"github.com/glebarez/sqlite"
 	"github.com/midnightsong/telegram-assistant/gotgproto/sessionMaker"
@@ -28,12 +29,14 @@ func GetDb() *gorm.DB {
 			SkipDefaultTransaction: true,
 			Logger:                 logger.Default.LogMode(logger.Silent),
 		})
+		if err != nil {
+			utils.LogError(context.TODO(), err.Error())
+			return
+		}
 		d, _ := _db.DB()
 		d.SetMaxOpenConns(100)
 		_ = _db.AutoMigrate(&entities.FwdMsg{}, &entities.Config{}, &entities.ForwardRelation{})
-		if err != nil {
-			utils.LogError(context.TODO(), err.Error())
-		}
+
 		//_db = _db.Debug()
 	})
 	return _db
