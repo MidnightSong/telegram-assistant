@@ -1,6 +1,7 @@
 package setting
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"fyne.io/fyne/v2"
@@ -12,7 +13,6 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/midnightsong/telegram-assistant/dao"
-	"github.com/midnightsong/telegram-assistant/utils"
 	"strconv"
 )
 
@@ -138,13 +138,11 @@ func GetSettingView(window fyne.Window) *fyne.Container {
 	saveButtonBox := container.NewHBox(
 		layout.NewSpacer(), confirmButton, layout.NewSpacer())
 	testButton := widget.NewButton("测试", func() {
-		identifier, err := utils.GetDeviceIdentifier()
-		if err != nil {
-			dialog.NewError(err, window).Show()
-			return
-		}
-		dialog.ShowInformation("id", identifier, window)
+		orientation := fyne.CurrentDevice().Orientation()
+		marshal, _ := json.Marshal(orientation)
+		dialog.ShowInformation("id", string(marshal), window)
 	})
+	testButton.Hide()
 	return container.New(layout.NewVBoxLayout(), configContainer, saveButtonBox, testButton)
 }
 

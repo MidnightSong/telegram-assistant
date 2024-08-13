@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
@@ -13,12 +14,15 @@ import (
 	"github.com/midnightsong/telegram-assistant/views/setting"
 )
 
+var sessions = dao.Sessions{}
+var peers = dao.Peers{}
+
 func LoginWindow(myApp fyne.App) {
 	loginWindow := myApp.NewWindow("个人号机器人")
-
+	pNum := config.Get("phoneNumber")
 	config := dao.Config{}
 	phoneNumber := binding.NewString()
-	phoneNumber.Set(config.Get("phoneNumber"))
+	phoneNumber.Set(pNum)
 	phoneNumberLabel := widget.NewLabel("手机号")
 	phoneNumberEntry := newPhoneNumEntry(phoneNumber)
 
@@ -30,13 +34,31 @@ func LoginWindow(myApp fyne.App) {
 			dialog.ShowError(e, loginWindow)
 			return
 		}
-
 		phoneNum, _ := phoneNumber.Get()
-		button.Disable()
-		activity.Start()
-		activity.Show()
-		config.Set("phoneNumber", phoneNum)
-		ExpireWindow(loginWindow, myApp)
+		if pNum != "" && phoneNum != pNum {
+			dialog.ShowConfirm("警告", fmt.Sprintf("将清除手机号：%s 的数据", pNum), func(b bool) {
+				if b {
+					button.Disable()
+					activity.Start()
+					activity.Show()
+					_ = sessions.DeleteAll()
+					_ = peers.DeleteAll()
+					config.Set("phoneNumber", phoneNum)
+					ExpireWindow(loginWindow, myApp)
+					return
+				} else {
+					activity.Stop()
+					activity.Hide()
+					button.Enable()
+				}
+			}, loginWindow)
+		} else {
+			button.Disable()
+			activity.Start()
+			activity.Show()
+			config.Set("phoneNumber", phoneNum)
+			ExpireWindow(loginWindow, myApp)
+		}
 	}
 	button = widget.NewButton("启动", loginButton)
 	showSetting := widget.NewButtonWithIcon("", theme.SettingsIcon(), func() {

@@ -8,8 +8,10 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/midnightsong/telegram-assistant/assistant"
 	"github.com/midnightsong/telegram-assistant/dao"
+	"github.com/midnightsong/telegram-assistant/gotgproto"
 	"github.com/midnightsong/telegram-assistant/views/dashboard"
 	"github.com/midnightsong/telegram-assistant/views/setting"
+	"os"
 	"time"
 )
 
@@ -64,7 +66,16 @@ func ExpireWindow(jumpInWindow fyne.Window, app fyne.App) {
 
 		}
 	}()
-
+	go func() {
+		for {
+			time.Sleep(1 * time.Second)
+			if gotgproto.PhoneNumberErr != "" {
+				dialog.ShowConfirm("错误", gotgproto.PhoneNumberErr, func(b bool) {
+					os.Exit(0)
+				}, expireWindow)
+			}
+		}
+	}()
 }
 
 func showSettingWindow(app fyne.App) fyne.Window {
@@ -116,6 +127,7 @@ func checkAut(window fyne.Window, app fyne.App) {
 	}
 	if result.Code == 2000 {
 		pass <- true
+		dashboard.ExpireTime = result.Data.Exp
 		return
 	}
 	errorDialog := dialog.NewError(errors.New("错误：\n"+result.Msg), window)

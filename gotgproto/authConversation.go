@@ -67,11 +67,14 @@ type basicConservator struct {
 	authStatus AuthStatus
 }
 
+var PhoneNumberErr string
+
 func (b *basicConservator) AskPhoneNumber() (string, error) {
 	if b.authStatus.Event == AuthStatusPhoneRetrial {
 		fmt.Println("The phone number you just entered seems to be incorrect,")
 		fmt.Println("Attempts Left:", b.authStatus.AttemptsLeft)
 		fmt.Println("Please try again....")
+		PhoneNumberErr = "手机号无效"
 	}
 	fmt.Print("Enter Phone Number: ")
 	return bufio.NewReader(os.Stdin).ReadString('\n')

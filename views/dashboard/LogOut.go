@@ -8,12 +8,17 @@ import (
 	"github.com/midnightsong/telegram-assistant/assistant/msg"
 	"github.com/midnightsong/telegram-assistant/dao"
 	"github.com/midnightsong/telegram-assistant/views/icon"
+	"time"
 )
 
 var sessions = dao.Sessions{}
 var peers = dao.Peers{}
+var ExpireTime int
 
 func GetLogOutView(window fyne.Window) *container.TabItem {
+	ac := widget.NewLabel("激活有效期至:")
+	ac1 := widget.NewLabel(time.Unix(int64(ExpireTime), 0).Format(time.DateTime))
+
 	var logOutButton *widget.Button
 	confirm := func(b bool) {
 		if b {
@@ -30,7 +35,7 @@ func GetLogOutView(window fyne.Window) *container.TabItem {
 		msg.Refresh2()
 	})
 	testButton.Hide()
-	logOutBox := container.NewVBox(logOutButton, testButton)
+	logOutBox := container.NewVBox(ac, ac1, logOutButton, testButton)
 
 	return container.NewTabItemWithIcon("", icon.GetIcon(icon.ShutDown), logOutBox)
 }
