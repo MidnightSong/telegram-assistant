@@ -3,12 +3,7 @@
 
 **本项目是基于[Fyne](https://github.com/fyne-io/fyne)和[GoTgProto](https://github.com/celestix/gotgproto)为基础二次开发的桌面应用程序**
 
-### 实现功能：
-#### 1、使用个人telegram账号登录，解决机器人无法互相之间读取消息的限制
-#### 2、echo机器人消息
-#### 3、实时修改配置项
 
-<img src="./msg.png"><img src="./config.png">
 
 有关 gotgproto的问题，你可以查看原始 [项目](https://github.com/celestix/gotgproto) 或关注原作者的频道:
 - 发布频道: [![Channel](https://img.shields.io/badge/GoTGProto-Channel-dark)](https://telegram.me/gotgproto)
